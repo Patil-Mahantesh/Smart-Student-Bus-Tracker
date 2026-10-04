@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart Student Bus Tracker
 
 A smart school transportation management system connecting **Parents, Drivers, Students, and Administrators**.
@@ -130,3 +131,7 @@ The project will be developed incrementally:
 16. Testing
 17. Final UI refinement
 18. Full system integration
+=======
+# Smart-Student-Bus-Tracker
+AI-powered Smart Student Bus Tracker combining face recognition for automated attendance, real-time GPS tracking, pickup/drop notifications, and bus timing management. It provides dedicated Parent, Driver, and Admin interfaces for efficient, secure, and responsive student transportation monitoring.
+>>>>>>> 8b320365ce2684ccc774208879dbe7f6cecf542c
