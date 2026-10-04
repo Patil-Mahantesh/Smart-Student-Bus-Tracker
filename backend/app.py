@@ -15,7 +15,7 @@ from attendance_routes import attendance_bp
 from notification_routes import notification_bp
 from location_routes import location_bp
 from core_routes import core_bp
-
+from stop_routes import stop_bp
 
 app = Flask(__name__)
 
@@ -46,6 +46,7 @@ app.register_blueprint(attendance_bp)
 app.register_blueprint(notification_bp)
 app.register_blueprint(location_bp)
 app.register_blueprint(core_bp)
+app.register_blueprint(stop_bp)
 app.register_blueprint(auth_bp)
 
 

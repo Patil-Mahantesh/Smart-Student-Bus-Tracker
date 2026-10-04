@@ -6265,59 +6265,2803 @@ main.parent-home.admin-home-root .admin-bottom-menu {
   }
 }
 
-
 /* ============================================================
-   STUDENT MANAGEMENT — PERMANENT DELETE
+   ADMIN CLEAN LAYOUT OVERRIDE
+   Replaces the old absolute/fixed Admin composition with a
+   responsive grid. This override is intentionally at the end so
+   it wins over the older Admin reference rules above.
    ============================================================ */
 
-.student-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+.admin-clean-shell {
+  display: grid !important;
+  grid-template-columns: 236px minmax(0, 1fr) !important;
+  grid-template-rows: 74px minmax(0, 1fr) !important;
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: #f5f7fb !important;
 }
 
-.student-card-actions .camera-button {
+.admin-clean-shell .admin-reference-header {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  padding: 0 28px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #e7ebf2 !important;
+  box-shadow: 0 1px 10px rgba(15, 23, 42, .035) !important;
+  z-index: 20 !important;
+}
+
+.admin-clean-shell .admin-sidebar {
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 236px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 24px 14px 18px !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+  border-right: 1px solid #e7ebf2 !important;
+  box-shadow: none !important;
+  z-index: 30 !important;
+  scrollbar-width: thin !important;
+}
+
+.admin-clean-shell .admin-sidebar-brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 0 8px 22px !important;
+  margin-bottom: 20px !important;
+  border-bottom: 1px solid #edf0f5 !important;
+}
+
+.admin-clean-shell .admin-sidebar-logo {
+  width: 44px !important;
+  height: 44px !important;
+  flex: 0 0 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 13px !important;
+  background: #eef5ff !important;
+  border: 1px solid #dce9ff !important;
+  font-size: 21px !important;
+}
+
+.admin-clean-shell .admin-sidebar-brand strong {
+  display: block !important;
+  color: #182235 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.admin-clean-shell .admin-sidebar-brand span {
+  display: block !important;
+  margin-top: 3px !important;
+  color: #8a96a8 !important;
+  font-size: 10px !important;
+}
+
+.admin-clean-shell .admin-sidebar-section {
+  margin: 0 0 20px !important;
+}
+
+.admin-clean-shell .admin-sidebar-label {
+  margin: 0 10px 8px !important;
+  color: #9aa5b5 !important;
+  font-size: 9px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-clean-shell .admin-sidebar-item {
+  width: 100% !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 3px 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  color: #3f4d63 !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background .16s ease, color .16s ease !important;
+}
+
+.admin-clean-shell .admin-sidebar-item > span:first-child {
+  width: 22px !important;
+  flex: 0 0 22px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 16px !important;
+}
+
+.admin-clean-shell .admin-sidebar-item:hover {
+  background: #f4f7fb !important;
+  color: #2563eb !important;
+}
+
+.admin-clean-shell .admin-sidebar-item.active {
+  background: #eaf2ff !important;
+  color: #2563eb !important;
+  font-weight: 750 !important;
+}
+
+.admin-clean-shell .admin-sidebar-bottom {
+  margin-top: auto !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #edf0f5 !important;
+}
+
+.admin-clean-shell .admin-logout-item {
+  color: #b54747 !important;
+}
+
+.admin-clean-shell .admin-logout-item:hover {
+  background: #fff1f1 !important;
+  color: #b42318 !important;
+}
+
+.admin-clean-shell .admin-clean-content {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+  padding: 26px 28px 34px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.9fr) minmax(300px, .95fr) !important;
+  grid-auto-rows: max-content !important;
+  align-content: start !important;
+  gap: 20px !important;
+  background: #f5f7fb !important;
+}
+
+.admin-clean-shell .admin-dashboard-only.admin-reference-summary-card {
+  position: static !important;
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, .045) !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card::before {
+  content: none !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .section-label {
+  margin: 0 0 12px !important;
+  color: #748197 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item {
+  min-height: 82px !important;
+  padding: 14px !important;
+  gap: 12px !important;
+  border-radius: 13px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e7ecf3 !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-icon {
+  width: 38px !important;
+  height: 38px !important;
+  flex-basis: 38px !important;
+  border-radius: 10px !important;
+  background: #edf4ff !important;
+  font-size: 17px !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item span:not(.bus-info-icon) {
+  color: #7b8799 !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item strong {
+  margin-top: 4px !important;
+  color: #172033 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+}
+
+.admin-clean-shell .admin-map-page {
+  position: static !important;
+  grid-column: 1 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  height: 500px !important;
+  min-height: 500px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  border: 1px solid #e1e7ef !important;
+  background: #e8edf4 !important;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, .045) !important;
+}
+
+.admin-clean-shell .admin-map-page > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 76px) !important;
+  min-height: 0 !important;
+}
+
+.admin-clean-shell .admin-map-page .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-clean-shell .admin-map-page > div:last-child {
+  position: absolute !important;
+  left: 14px !important;
+  right: 14px !important;
+  bottom: 14px !important;
+  min-height: 56px !important;
+  padding: 10px 14px !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.96) !important;
+  border: 1px solid #e4e9f0 !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+  position: static !important;
+  grid-column: 2 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start !important;
+  gap: 10px !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, .045) !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access::before {
+  content: "QUICK ACTIONS" !important;
+  margin: 0 0 4px !important;
+  color: #748197 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card {
+  width: 100% !important;
+  min-height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  border: 1px solid #e6ebf2 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card:hover {
+  background: #f7faff !important;
+  border-color: #cbdcff !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card > span {
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 36px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #f1f5f9 !important;
+  font-size: 17px !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card > div {
+  min-width: 0 !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card strong {
+  display: block !important;
+  color: #263449 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access .action-card p {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  color: #8a96a8 !important;
+  font-size: 10px !important;
+}
+
+.admin-clean-shell .admin-module-page,
+.admin-clean-shell .attendance-card {
+  position: static !important;
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 5px 18px rgba(15,23,42,.045) !important;
+}
+
+.admin-clean-shell .admin-module-heading h2 {
+  margin: 4px 0 6px !important;
+  color: #172033 !important;
+  font-size: 24px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+.admin-clean-shell .admin-module-heading p:last-child {
+  margin: 0 !important;
+  color: #7b8799 !important;
+  font-size: 13px !important;
+}
+
+.admin-clean-shell .admin-module-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  margin-top: 22px !important;
+}
+
+.admin-clean-shell .admin-module-info-card {
+  min-height: 130px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 18px !important;
+  border: 1px solid #e7ecf3 !important;
+  border-radius: 13px !important;
+  background: #f8fafc !important;
+}
+
+.admin-clean-shell .admin-module-icon {
+  width: 46px !important;
+  height: 46px !important;
+  flex: 0 0 46px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 12px !important;
+  background: #edf4ff !important;
+  font-size: 22px !important;
+}
+
+.admin-clean-shell .admin-module-info-card strong {
+  color: #263449 !important;
+  font-size: 13px !important;
+}
+
+.admin-clean-shell .admin-module-info-card p {
+  margin: 5px 0 0 !important;
+  color: #7b8799 !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-dashboard-only {
+  display: none !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-clean-content {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-map-page {
+  grid-column: 1 / -1 !important;
+  height: 560px !important;
+  min-height: 560px !important;
+}
+
+@media (max-width: 1100px) {
+  .admin-clean-shell {
+    grid-template-columns: 210px minmax(0, 1fr) !important;
+  }
+
+  .admin-clean-shell .admin-sidebar {
+    width: 210px !important;
+  }
+
+  .admin-clean-shell .admin-clean-content {
+    padding: 22px !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-clean-shell .admin-reference-summary-card .bus-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .admin-clean-shell .admin-map-page,
+  .admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    grid-column: 1 !important;
+  }
+
+  .admin-clean-shell .admin-module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-clean-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 68px auto minmax(0, 1fr) !important;
+    height: 100dvh !important;
+  }
+
+  .admin-clean-shell .admin-reference-header {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    padding: 0 14px !important;
+  }
+
+  .admin-clean-shell .admin-sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 88px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding: 8px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #e7ebf2 !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-brand,
+  .admin-clean-shell .admin-sidebar-label,
+  .admin-clean-shell .admin-sidebar-bottom {
+    display: none !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-section {
+    display: flex !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-item {
+    width: auto !important;
+    min-width: 92px !important;
+    margin: 0 !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 7px 10px !important;
+    font-size: 9px !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-item > span:first-child {
+    font-size: 15px !important;
+  }
+
+  .admin-clean-shell .admin-clean-content {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    padding: 14px !important;
+    gap: 14px !important;
+  }
+
+  .admin-clean-shell .admin-reference-summary-card .bus-info-grid,
+  .admin-clean-shell .admin-module-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-clean-shell .admin-map-page,
+  .admin-clean-shell.admin-has-menu .admin-map-page {
+    height: 420px !important;
+    min-height: 420px !important;
+  }
+
+  .admin-clean-shell .admin-module-page,
+  .admin-clean-shell .attendance-card {
+    padding: 18px !important;
+  }
+
+  .admin-clean-shell .admin-reference-profile > span:not(.admin-reference-avatar),
+  .admin-clean-shell .admin-reference-chevron {
+    display: none !important;
+  }
+}
+
+
+/* ============================================================
+   DRIVER LOGOUT FIX
+   The Driver header avatar and bottom navigation must always
+   provide a real logout action.
+   ============================================================ */
+.driver-admin-dashboard .driver-user-button {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.driver-admin-dashboard .driver-logout-nav {
+  border: 0 !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  color: #64748b !important;
+}
+
+.driver-admin-dashboard .driver-logout-nav:hover {
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+}
+
+/* ============================================================
+   ADMIN HOME — FINAL CLEAN LAYOUT OVERRIDE
+   This override fixes the old absolute-positioned Admin home.
+   ============================================================ */
+
+.admin-reference-dashboard.admin-clean-shell {
+  display: grid !important;
+  grid-template-columns: 236px minmax(0, 1fr) !important;
+  grid-template-rows: 74px minmax(0, 1fr) !important;
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: #f5f7fb !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+  box-sizing: border-box !important;
+  z-index: 50 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 236px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  margin: 0 !important;
+  padding: 24px 14px 18px !important;
+  box-sizing: border-box !important;
+  z-index: 60 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 24px 28px 32px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr) !important;
+  grid-auto-rows: max-content !important;
+  align-content: start !important;
+  gap: 18px !important;
+  background: #f5f7fb !important;
+}
+
+/* Dashboard summary */
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.045) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .section-label {
+  margin: 0 0 12px !important;
+  color: #748197 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  gap: 12px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-item {
+  min-width: 0 !important;
+  min-height: 78px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 13px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e7ecf3 !important;
+  border-radius: 13px !important;
+  background: #f8fafc !important;
+}
+
+/* Map — IMPORTANT: override the old absolute-positioned rule */
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  grid-column: 1 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  height: 480px !important;
+  min-height: 480px !important;
+  max-height: 480px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  border-radius: 16px !important;
+  border: 1px solid #e1e7ef !important;
+  background: #e8edf4 !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.045) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 76px) !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page > div:last-child {
+  position: absolute !important;
+  left: 14px !important;
+  right: 14px !important;
+  bottom: 14px !important;
+  width: auto !important;
+  min-height: 58px !important;
+  box-sizing: border-box !important;
+  padding: 10px 14px !important;
+  margin: 0 !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.96) !important;
+  border: 1px solid #e4e9f0 !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
+}
+
+/* Quick actions — normal grid item, never absolute */
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  grid-column: 2 !important;
+  grid-row: auto !important;
+  width: 100% !important;
+  height: fit-content !important;
+  min-height: 480px !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start !important;
+  gap: 10px !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  border: 1px solid #e5eaf1 !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.045) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only::before {
+  content: "QUICK ACTIONS" !important;
+  display: block !important;
+  margin: 0 0 2px !important;
+  color: #748197 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e6ebf2 !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  text-align: left !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card:hover {
+  background: #f7faff !important;
+  border-color: #cbdcff !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card > span {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #f1f5f9 !important;
+  font-size: 17px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card > div {
+  min-width: 0 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card strong {
+  display: block !important;
+  color: #263449 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card p {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  color: #8a96a8 !important;
+  font-size: 10px !important;
+}
+
+/* Any selected module gets the full content width and normal flow. */
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu .admin-clean-content {
+  grid-template-columns: minmax(0,1fr) !important;
+  gap: 18px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu .admin-clean-content > .admin-module-page,
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu .admin-clean-content > .attendance-card {
+  grid-column: 1 !important;
+  width: 100% !important;
+}
+
+/* Keep dashboard-only content completely out of the selected module view. */
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu .admin-dashboard-only {
+  display: none !important;
+}
+
+/* Tablet */
+@media (max-width: 1050px) {
+  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page,
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    grid-column: 1 !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    min-height: auto !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .admin-reference-dashboard.admin-clean-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 68px auto minmax(0,1fr) !important;
+    height: 100dvh !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    padding: 0 14px !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 86px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: flex !important;
+    padding: 8px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #e7ebf2 !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 14px !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-map-page {
+    height: 400px !important;
+    min-height: 400px !important;
+    max-height: 400px !important;
+  }
+}
+
+
+/* ============================================================
+   ADMIN HOME — SINGLE-SIDEBAR CLEAN DESKTOP LAYOUT
+   Final override: one sidebar, one header, one scroll area.
+   Keeps the existing light Smart Student Bus visual language.
+   ============================================================ */
+html:has(.admin-clean-shell),
+body:has(.admin-clean-shell),
+#root:has(.admin-clean-shell) {
   width: 100%;
-  margin-top: 0 !important;
+  height: 100%;
+  margin: 0;
+  overflow: hidden !important;
 }
 
-.student-delete-button {
-  width: 100%;
-  min-height: 44px;
-
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-
-  background: #fff1f2;
-  color: #b91c1c;
-
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 800;
-
-  cursor: pointer;
-
-  transition:
-    background .18s ease,
-    border-color .18s ease,
-    transform .18s ease,
-    box-shadow .18s ease;
+.admin-clean-shell {
+  display: grid !important;
+  grid-template-columns: 236px minmax(0, 1fr) !important;
+  grid-template-rows: 74px minmax(0, 1fr) !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: #f4f7fb !important;
+  box-sizing: border-box !important;
 }
 
-.student-delete-button:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  box-shadow: 0 5px 14px rgba(185, 28, 28, .08);
-  transform: translateY(-1px);
+/* ONE header only: it lives to the right of the ONE sidebar. */
+.admin-clean-shell > .admin-reference-header {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e7ebf2 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 2px 10px rgba(24, 39, 75, .035) !important;
+  z-index: 20 !important;
 }
 
-.student-delete-button:active {
-  transform: translateY(0);
+/* ONE sidebar only. Never create a second horizontal/menu bar. */
+.admin-clean-shell > .admin-sidebar {
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 236px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 24px 14px 16px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  border-right: 1px solid #e5eaf1 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  z-index: 30 !important;
 }
 
-.student-delete-button:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-  transform: none;
+.admin-clean-shell > .admin-sidebar::-webkit-scrollbar {
+  width: 7px;
+}
+
+.admin-clean-shell > .admin-sidebar::-webkit-scrollbar-thumb {
+  background: #c9d1dc;
+  border-radius: 10px;
+}
+
+.admin-clean-shell > .admin-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Header */
+.admin-clean-shell .admin-reference-brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+.admin-clean-shell .admin-reference-logo,
+.admin-clean-shell .admin-sidebar-logo {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 12px !important;
+  background: #eef5ff !important;
+  font-size: 22px !important;
+}
+
+.admin-clean-shell .admin-reference-brand-name {
+  margin: 0 0 2px !important;
+  color: #718096 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.admin-clean-shell .admin-reference-brand h1 {
+  margin: 0 !important;
+  color: #1d2a3d !important;
+  font-size: 22px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+}
+
+.admin-clean-shell .admin-reference-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.admin-clean-shell .admin-reference-notification {
+  width: 42px !important;
+  height: 42px !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #f8fafc !important;
+  cursor: pointer !important;
+}
+
+.admin-clean-shell .admin-reference-profile {
+  min-height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.admin-clean-shell .admin-reference-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: #eaf2ff !important;
+  color: #3475e6 !important;
+  font-weight: 800 !important;
+}
+
+/* Sidebar */
+.admin-clean-shell .admin-sidebar-brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 0 7px 22px !important;
+  margin: 0 0 20px !important;
+  border-bottom: 1px solid #edf0f4 !important;
+}
+
+.admin-clean-shell .admin-sidebar-brand strong {
+  display: block !important;
+  color: #1d2a3d !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+}
+
+.admin-clean-shell .admin-sidebar-brand span {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #8793a6 !important;
+  font-size: 10px !important;
+}
+
+.admin-clean-shell .admin-sidebar-section {
+  margin: 0 0 22px !important;
+}
+
+.admin-clean-shell .admin-sidebar-label {
+  margin: 0 10px 9px !important;
+  color: #8995a8 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-clean-shell .admin-sidebar-item {
+  width: 100% !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin: 3px 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #34445b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background .16s ease, color .16s ease !important;
+}
+
+.admin-clean-shell .admin-sidebar-item:hover {
+  background: #f5f8fc !important;
+  color: #2563d9 !important;
+}
+
+.admin-clean-shell .admin-sidebar-item.active {
+  background: #eaf2ff !important;
+  color: #2563d9 !important;
+  font-weight: 750 !important;
+}
+
+.admin-clean-shell .admin-sidebar-item > span:first-child {
+  width: 22px !important;
+  min-width: 22px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 16px !important;
+}
+
+.admin-clean-shell .admin-sidebar-bottom {
+  margin-top: 6px !important;
+  padding-top: 15px !important;
+  border-top: 1px solid #edf0f4 !important;
+}
+
+.admin-clean-shell .admin-logout-item {
+  color: #64748b !important;
+}
+
+.admin-clean-shell .admin-logout-item:hover {
+  color: #dc2626 !important;
+  background: #fff4f4 !important;
+}
+
+/* MAIN CONTENT: the ONLY scrollable page area. */
+.admin-clean-shell > .admin-clean-content {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 24px 28px 30px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.75fr) minmax(300px, .85fr) !important;
+  grid-auto-rows: max-content !important;
+  align-content: start !important;
+  gap: 18px !important;
+  background: #f4f7fb !important;
+}
+
+.admin-clean-shell > .admin-clean-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-clean-shell > .admin-clean-content::-webkit-scrollbar-thumb {
+  background: #c9d1dc;
+  border-radius: 10px;
+}
+
+.admin-clean-shell > .admin-clean-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* System overview spans the entire content width. */
+.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e3e9f1 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 5px 20px rgba(25, 43, 73, .045) !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .section-label {
+  margin: 0 0 12px !important;
+  text-align: left !important;
+  color: #758297 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item {
+  min-height: 76px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 13px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e5eaf1 !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-icon {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #edf4ff !important;
+  font-size: 17px !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item > div > span {
+  display: block !important;
+  margin-bottom: 3px !important;
+  color: #718096 !important;
+  font-size: 10px !important;
+}
+
+.admin-clean-shell .admin-reference-summary-card .bus-info-item strong {
+  display: block !important;
+  color: #172235 !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+}
+
+/* Map occupies the left half of the second dashboard row. */
+.admin-clean-shell .admin-reference-map-card.admin-map-page {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 480px !important;
+  min-height: 480px !important;
+  max-height: 480px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e1e7ef !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 5px 20px rgba(25, 43, 73, .045) !important;
+}
+
+.admin-clean-shell .admin-reference-map-card.admin-map-page > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 76px) !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+.admin-clean-shell .admin-reference-map-card.admin-map-page .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-clean-shell .admin-reference-map-card.admin-map-page > div:last-child {
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  min-height: 54px !important;
+  padding: 9px 13px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e4e9f0 !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.97) !important;
+  box-shadow: 0 8px 22px rgba(15,23,42,.09) !important;
+}
+
+/* Quick actions occupies the right half of the second dashboard row. */
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-height: 480px !important;
+  height: 480px !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-auto-rows: minmax(64px, 1fr) !important;
+  align-content: start !important;
+  gap: 10px !important;
+  border: 1px solid #e3e9f1 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 5px 20px rgba(25, 43, 73, .045) !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only::before {
+  content: "QUICK ACTIONS" !important;
+  display: block !important;
+  margin: 0 0 2px !important;
+  color: #758297 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card {
+  width: 100% !important;
+  min-height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e5eaf1 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card:hover {
+  background: #f8fbff !important;
+  border-color: #cdddf7 !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card > span {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #edf4ff !important;
+  font-size: 17px !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card strong {
+  display: block !important;
+  color: #263449 !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card p {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  color: #8a96a8 !important;
+  font-size: 10px !important;
+}
+
+/* Selected modules use the same single content pane; dashboard widgets disappear. */
+.admin-clean-shell.admin-has-menu > .admin-clean-content {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 18px !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-dashboard-only {
+  display: none !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-clean-content > .attendance-card,
+.admin-clean-shell.admin-has-menu .admin-clean-content > .admin-module-page {
+  grid-column: 1 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.admin-clean-shell.admin-has-menu .admin-clean-content > .attendance-card {
+  min-height: calc(100% - 2px) !important;
+  padding: 26px !important;
+  border: 1px solid #e3e9f1 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 5px 20px rgba(25, 43, 73, .045) !important;
+}
+
+/* Prevent the old floating menu system from appearing anywhere in Admin. */
+.admin-clean-shell .flow-menu,
+.admin-clean-shell .flow-menu-item {
+  display: none !important;
+}
+
+/* Tablet */
+@media (max-width: 1100px) {
+  .admin-clean-shell {
+    grid-template-columns: 210px minmax(0, 1fr) !important;
+  }
+
+  .admin-clean-shell > .admin-sidebar {
+    width: 210px !important;
+  }
+
+  .admin-clean-shell > .admin-clean-content {
+    padding: 20px !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-clean-shell .admin-reference-map-card.admin-map-page,
+  .admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    grid-column: 1 !important;
+  }
+}
+
+/* Mobile: one compact navigation row, still no duplicate menu. */
+@media (max-width: 760px) {
+  html:has(.admin-clean-shell),
+  body:has(.admin-clean-shell),
+  #root:has(.admin-clean-shell) {
+    overflow: hidden !important;
+  }
+
+  .admin-clean-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 68px 78px minmax(0, 1fr) !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
+  .admin-clean-shell > .admin-reference-header {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    padding: 0 14px !important;
+  }
+
+  .admin-clean-shell > .admin-sidebar {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    height: 78px !important;
+    max-height: 78px !important;
+    padding: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid #e5eaf1 !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-brand,
+  .admin-clean-shell .admin-sidebar-label,
+  .admin-clean-shell .admin-sidebar-bottom {
+    display: none !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-section {
+    display: flex !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-item {
+    width: auto !important;
+    min-width: 88px !important;
+    min-height: 58px !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 5px 8px !important;
+    font-size: 9px !important;
+  }
+
+  .admin-clean-shell .admin-sidebar-item > span:first-child {
+    font-size: 15px !important;
+  }
+
+  .admin-clean-shell > .admin-clean-content {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    padding: 14px !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-clean-shell .admin-reference-summary-card .bus-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .admin-clean-shell .admin-reference-map-card.admin-map-page,
+  .admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    grid-column: 1 !important;
+  }
+
+  .admin-clean-shell .admin-reference-map-card.admin-map-page,
+  .admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    height: 420px !important;
+    min-height: 420px !important;
+  }
+}
+
+
+/* ============================================================
+   ADMIN FINAL CLEAN LAYOUT — SINGLE SIDEBAR / NO OVERLAPPING
+   This override targets the current Admin JSX directly.
+   ============================================================ */
+
+html:has(.admin-reference-dashboard),
+body:has(.admin-reference-dashboard),
+#root:has(.admin-reference-dashboard) {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.admin-reference-dashboard {
+  position: relative !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 640px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  background: #f4f7fb !important;
+}
+
+/* ONE permanent left sidebar */
+.admin-reference-dashboard > .admin-sidebar {
+  position: fixed !important;
+  z-index: 5000 !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  width: 240px !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 20px 14px 16px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+  background: #ffffff !important;
+  border-right: 1px solid #e5eaf1 !important;
+  box-shadow: 3px 0 18px rgba(15,23,42,.035) !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-brand {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 4px 8px 18px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #edf1f5 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-logo {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 13px !important;
+  background: #eef5ff !important;
+  border: 1px solid #dceaff !important;
+  font-size: 22px !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-brand strong {
+  display: block !important;
+  margin: 0 !important;
+  color: #1f2b3d !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-brand span {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #8793a5 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-label {
+  margin: 4px 10px 7px !important;
+  color: #94a0b1 !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: .09em !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-item {
+  width: 100% !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 0 12px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #46556b !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background .16s ease, color .16s ease !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-item > span:first-child {
+  width: 22px !important;
+  min-width: 22px !important;
+  text-align: center !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-item:hover {
+  background: #f6f9fd !important;
+  color: #245fcf !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-item.active {
+  background: #eaf2ff !important;
+  color: #2563d9 !important;
+  font-weight: 750 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-sidebar-bottom {
+  margin-top: auto !important;
+  padding-top: 12px !important;
+  border-top: 1px solid #edf1f5 !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-logout-item {
+  color: #64748b !important;
+}
+
+.admin-reference-dashboard > .admin-sidebar .admin-logout-item:hover {
+  background: #fff4f4 !important;
+  color: #dc2626 !important;
+}
+
+/* Header stays beside the sidebar, never underneath the map. */
+.admin-reference-dashboard > .admin-reference-header {
+  position: fixed !important;
+  z-index: 4000 !important;
+  top: 0 !important;
+  left: 240px !important;
+  right: 0 !important;
+  width: auto !important;
+  height: 76px !important;
+  min-height: 76px !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+  box-sizing: border-box !important;
+  background: rgba(255,255,255,.98) !important;
+  border-bottom: 1px solid #e5eaf1 !important;
+  box-shadow: 0 2px 14px rgba(15,23,42,.045) !important;
+}
+
+/* Dashboard summary */
+.admin-reference-dashboard > .admin-reference-summary-card {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 92px !important;
+  left: 260px !important;
+  right: 24px !important;
+  width: auto !important;
+  height: 166px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 7px 24px rgba(15,23,42,.055) !important;
+}
+
+.admin-reference-dashboard > .admin-reference-summary-card::before {
+  content: none !important;
+}
+
+.admin-reference-dashboard > .admin-reference-summary-card > .section-label {
+  margin: 0 0 12px !important;
+  padding: 0 0 10px !important;
+  border-bottom: 1px solid #edf1f5 !important;
+  text-align: center !important;
+  color: #71809a !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+}
+
+.admin-reference-dashboard > .admin-reference-summary-card .bus-info-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.admin-reference-dashboard > .admin-reference-summary-card .bus-info-item {
+  min-width: 0 !important;
+  min-height: 84px !important;
+  padding: 12px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  border: 1px solid #e6ebf2 !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+}
+
+/* Main map — below summary and beside quick actions */
+.admin-reference-dashboard > .admin-reference-map-card {
+  position: absolute !important;
+  z-index: 5 !important;
+  top: 276px !important;
+  left: 260px !important;
+  right: 380px !important;
+  bottom: 24px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  background: #e9eef5 !important;
+  box-shadow: 0 8px 25px rgba(15,23,42,.06) !important;
+}
+
+.admin-reference-dashboard > .admin-reference-map-card > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 72px) !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+.admin-reference-dashboard > .admin-reference-map-card .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-reference-dashboard > .admin-reference-map-card > div:last-child {
+  position: absolute !important;
+  z-index: 20 !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 10px !important;
+  min-height: 52px !important;
+  padding: 9px 13px !important;
+  box-sizing: border-box !important;
+  border-radius: 13px !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid #e1e7ef !important;
+  box-shadow: 0 8px 22px rgba(15,23,42,.10) !important;
+}
+
+/* Quick actions */
+.admin-reference-dashboard > .admin-reference-quick-access {
+  position: absolute !important;
+  z-index: 8 !important;
+  top: 276px !important;
+  right: 24px !important;
+  bottom: 24px !important;
+  width: 336px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-auto-rows: minmax(54px, auto) !important;
+  align-content: start !important;
+  gap: 8px !important;
+  overflow-y: auto !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 7px 24px rgba(15,23,42,.055) !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access::before {
+  content: "QUICK ACCESS" !important;
+  display: block !important;
+  margin: 0 0 2px !important;
+  color: #71809a !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-align: center !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access .action-card {
+  width: 100% !important;
+  min-height: 54px !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 9px 11px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border: 1px solid #e4e9f0 !important;
+  border-radius: 11px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access .action-card:hover {
+  background: #f7faff !important;
+  border-color: #cadcf8 !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access .action-card > span {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 9px !important;
+  background: #edf4ff !important;
+  font-size: 16px !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access .action-card strong {
+  display: block !important;
+  color: #263449 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+}
+
+.admin-reference-dashboard > .admin-reference-quick-access .action-card p {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  color: #8a96a8 !important;
+  font-size: 9px !important;
+}
+
+/* When a module is open, show one clean content card below the header.
+   The sidebar remains visible and the map/dashboard widgets disappear. */
+.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-summary-card,
+.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-map-card,
+.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-quick-access {
+  display: none !important;
+}
+
+.admin-reference-dashboard > .attendance-card {
+  position: absolute !important;
+  z-index: 100 !important;
+  top: 92px !important;
+  left: 260px !important;
+  right: 24px !important;
+  bottom: 24px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+  overflow: auto !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 8px 28px rgba(15,23,42,.065) !important;
+}
+
+/* Never allow the old floating Admin nav to reappear. */
+.admin-reference-dashboard > .flow-menu,
+.admin-reference-dashboard > .flow-menu-item {
+  display: none !important;
+}
+
+/* Tablet */
+@media (max-width: 1050px) and (min-width: 761px) {
+  .admin-reference-dashboard > .admin-sidebar {
+    width: 210px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-header {
+    left: 210px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-summary-card,
+  .admin-reference-dashboard > .admin-reference-map-card,
+  .admin-reference-dashboard > .attendance-card {
+    left: 228px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-map-card {
+    right: 320px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-quick-access {
+    width: 292px !important;
+    right: 18px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-summary-card .bus-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  html:has(.admin-reference-dashboard),
+  body:has(.admin-reference-dashboard),
+  #root:has(.admin-reference-dashboard) {
+    overflow: auto !important;
+  }
+
+  .admin-reference-dashboard {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    padding-bottom: 18px !important;
+  }
+
+  .admin-reference-dashboard > .admin-sidebar {
+    position: fixed !important;
+    top: auto !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    width: auto !important;
+    height: 64px !important;
+    padding: 5px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border: 1px solid #e1e7ef !important;
+    border-radius: 18px !important;
+    box-shadow: 0 14px 34px rgba(15,23,42,.14) !important;
+  }
+
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-brand,
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-label,
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-bottom {
+    display: none !important;
+  }
+
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-section {
+    flex-direction: row !important;
+    flex: 0 0 auto !important;
+    gap: 3px !important;
+  }
+
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-item {
+    width: 82px !important;
+    min-width: 82px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 4px 6px !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    font-size: 8px !important;
+  }
+
+  .admin-reference-dashboard > .admin-sidebar .admin-sidebar-item > span:first-child {
+    font-size: 14px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-header {
+    position: relative !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    padding: 0 14px !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-summary-card {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: calc(100% - 20px) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 12px 10px 0 !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-summary-card .bus-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-map-card {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: calc(100% - 20px) !important;
+    height: 420px !important;
+    min-height: 420px !important;
+    margin: 12px 10px 0 !important;
+  }
+
+  .admin-reference-dashboard > .admin-reference-quick-access {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: calc(100% - 20px) !important;
+    height: auto !important;
+    margin: 12px 10px 90px !important;
+  }
+
+  .admin-reference-dashboard > .attendance-card {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: calc(100% - 20px) !important;
+    min-height: calc(100dvh - 90px) !important;
+    margin: 12px 10px 90px !important;
+  }
+}
+
+
+/* ============================================================
+   ADMIN HOME — AUTHORITATIVE FINAL SHELL
+   Current JSX: header + sidebar + content wrapper.
+   One sidebar. One header. One content scroll area.
+   ============================================================ */
+html:has(.admin-clean-shell), body:has(.admin-clean-shell), #root:has(.admin-clean-shell) {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell {
+  display: grid !important;
+  grid-template-columns: 232px minmax(0, 1fr) !important;
+  grid-template-rows: 76px minmax(0, 1fr) !important;
+  grid-template-areas: "sidebar header" "sidebar content" !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: #f4f7fb !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
+  grid-area: header !important;
+  position: relative !important;
+  inset: auto !important;
+  z-index: 20 !important;
+  width: 100% !important;
+  height: 76px !important;
+  min-height: 76px !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #fff !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e7ebf2 !important;
+  border-radius: 0 !important;
+  box-shadow: 0 2px 12px rgba(15,23,42,.04) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
+  grid-area: sidebar !important;
+  position: relative !important;
+  inset: auto !important;
+  z-index: 30 !important;
+  width: 232px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 22px 12px 16px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: #fff !important;
+  border: 0 !important;
+  border-right: 1px solid #e5eaf1 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-sidebar::-webkit-scrollbar { width: 6px; }
+.admin-reference-dashboard.admin-clean-shell > .admin-sidebar::-webkit-scrollbar-thumb { background: #cbd3de; border-radius: 999px; }
+
+.admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+  grid-area: content !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 22px 24px 28px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 320px !important;
+  grid-auto-rows: max-content !important;
+  align-content: start !important;
+  gap: 18px !important;
+  background: #f4f7fb !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell > .admin-clean-content::-webkit-scrollbar { width: 8px; }
+.admin-reference-dashboard.admin-clean-shell > .admin-clean-content::-webkit-scrollbar-thumb { background: #cbd3de; border-radius: 999px; }
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only {
+  grid-column: 1 / -1 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  border: 1px solid #e5eaf1 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+  gap: 12px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-item {
+  min-width: 0 !important;
+  min-height: 78px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 13px !important;
+  box-sizing: border-box !important;
+  background: #f8fafc !important;
+  border: 1px solid #e7ecf3 !important;
+  border-radius: 13px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only {
+  grid-column: 1 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 500px !important;
+  min-height: 500px !important;
+  max-height: 500px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  background: #e8edf4 !important;
+  border: 1px solid #e1e7ef !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only > div:first-child {
+  position: relative !important;
+  width: 100% !important;
+  height: calc(100% - 74px) !important;
+  min-height: 0 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only > div:last-child {
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  width: auto !important;
+  min-height: 56px !important;
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid #e3e8ef !important;
+  border-radius: 13px !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+  grid-column: 2 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 500px !important;
+  min-height: 500px !important;
+  margin: 0 !important;
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-content: start !important;
+  gap: 10px !important;
+  overflow: hidden !important;
+  background: #fff !important;
+  border: 1px solid #e5eaf1 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only::before {
+  content: "QUICK ACTIONS" !important;
+  display: block !important;
+  margin: 0 0 2px !important;
+  color: #748197 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card {
+  width: 100% !important;
+  min-height: 62px !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-align: left !important;
+  border: 1px solid #e6ebf2 !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card > span {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #f1f5f9 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card strong {
+  display: block !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card p {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  font-size: 10px !important;
+  color: #8a96a8 !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell .flow-menu,
+.admin-reference-dashboard.admin-clean-shell .admin-style-bottom-nav {
+  display: none !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content {
+  display: block !important;
+  padding: 22px 24px 28px !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .admin-dashboard-only {
+  display: none !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .attendance-card,
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .admin-module-page {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 22px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  background: #fff !important;
+  border: 1px solid #e5eaf1 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+  z-index: 1 !important;
+}
+
+@media (max-width: 1100px) {
+  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+    grid-template-columns: 1fr !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only,
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    grid-column: 1 !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-reference-dashboard.admin-clean-shell {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 68px minmax(0,1fr) !important;
+    grid-template-areas: "header" "content" !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
+    grid-area: header !important;
+    height: 68px !important;
+    min-height: 68px !important;
+    padding: 0 14px !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
+    display: none !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+    grid-area: content !important;
+    padding: 14px !important;
+    grid-template-columns: 1fr !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only {
+    height: 380px !important;
+    min-height: 380px !important;
+    max-height: 380px !important;
+  }
+}
+
+/* ============================================================
+   ADMIN HOME — FINAL CLEAN VERSION
+   User-approved structure: ONE sidebar, ONE header, ONE large map.
+   Remove the crossed-out System Overview and Quick Access panels.
+   ============================================================ */
+
+/* The crossed-out dashboard summary and quick-access panels are not
+   part of the clean Admin home. Keep them out of the layout entirely. */
+.admin-reference-dashboard.admin-clean-shell
+  .admin-reference-summary-card.admin-dashboard-only,
+.admin-reference-dashboard.admin-clean-shell
+  .admin-reference-quick-access.admin-dashboard-only {
+  display: none !important;
+}
+
+/* With only the live map on Admin Home, use the whole content width. */
+.admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+  display: block !important;
+  padding: 22px 24px 28px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Make the Admin map the single main dashboard surface. */
+.admin-reference-dashboard.admin-clean-shell
+  .map-card.admin-reference-map-card.admin-dashboard-only {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: calc(100% - 2px) !important;
+  min-height: calc(100dvh - 126px) !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  background: #e8edf4 !important;
+  border: 1px solid #e1e7ef !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(15,23,42,.07) !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell
+  .map-card.admin-reference-map-card.admin-dashboard-only > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 78px) !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell
+  .map-card.admin-reference-map-card.admin-dashboard-only .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-reference-dashboard.admin-clean-shell
+  .map-card.admin-reference-map-card.admin-dashboard-only > div:last-child {
+  position: absolute !important;
+  left: 14px !important;
+  right: 14px !important;
+  bottom: 14px !important;
+  min-height: 56px !important;
+  margin: 0 !important;
+  padding: 10px 16px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid #e3e8ef !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
+}
+
+/* Do not let any legacy Admin-home absolute positioning resurrect. */
+.admin-reference-dashboard.admin-clean-shell
+  > .admin-clean-content
+  > .admin-dashboard-only {
+  position: static !important;
+  inset: auto !important;
+}
+
+/* Selected modules still occupy the entire content region cleanly. */
+.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content {
+  display: block !important;
+  padding: 22px 24px 28px !important;
+}
+
+@media (max-width: 760px) {
+  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
+    padding: 14px !important;
+  }
+
+  .admin-reference-dashboard.admin-clean-shell
+    .map-card.admin-reference-map-card.admin-dashboard-only {
+    min-height: calc(100dvh - 96px) !important;
+    height: calc(100dvh - 96px) !important;
+    border-radius: 14px !important;
+  }
+}
+
+
+/* ============================================================
+   ADMIN HOME — TRUE FULL-WIDTH / FULL-HEIGHT FINAL OVERRIDE
+   Fixes legacy max-width and padding rules from .parent-header,
+   .map-card and .parent-actions.
+   ============================================================ */
+
+/* The Admin shell must use the entire browser viewport. */
+html:has(.admin-clean-shell),
+body:has(.admin-clean-shell),
+#root:has(.admin-clean-shell) {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Override the old .parent-home padding and any width limitation. */
+main.parent-home.admin-clean-shell {
+  width: 100vw !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Header: full remaining width beside the single sidebar. */
+main.parent-home.admin-clean-shell > .admin-reference-header {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 28px !important;
+  justify-self: stretch !important;
+}
+
+/* Content: no hidden max-width and no unnecessary bottom padding. */
+main.parent-home.admin-clean-shell > .admin-clean-content {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 18px 18px 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: block !important;
+}
+
+/* One large map fills every available pixel of the content area. */
+main.parent-home.admin-clean-shell
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card.admin-dashboard-only {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+}
+
+/* The map itself uses all of the map surface above the BUS001 bar. */
+main.parent-home.admin-clean-shell
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card.admin-dashboard-only
+  > div:first-child {
+  width: 100% !important;
+  height: calc(100% - 76px) !important;
+  min-height: 0 !important;
+  position: relative !important;
+}
+
+/* Leaflet fills the map container exactly. */
+main.parent-home.admin-clean-shell
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card.admin-dashboard-only
+  .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* BUS001 status stays inside the map card at the very bottom. */
+main.parent-home.admin-clean-shell
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card.admin-dashboard-only
+  > div:last-child {
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  width: auto !important;
+  min-height: 56px !important;
+  margin: 0 !important;
+  padding: 10px 16px !important;
+  box-sizing: border-box !important;
+}
+
+/* The removed dashboard panels must never take layout space. */
+main.parent-home.admin-clean-shell
+  .admin-reference-summary-card.admin-dashboard-only,
+main.parent-home.admin-clean-shell
+  .admin-reference-quick-access.admin-dashboard-only {
+  display: none !important;
+}
+
+/* Selected modules remain full-width and keep the same content edge. */
+main.parent-home.admin-clean-shell.admin-has-menu
+  > .admin-clean-content {
+  display: block !important;
+  padding: 18px 18px 18px !important;
+  overflow-y: auto !important;
+}
+
+main.parent-home.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .attendance-card,
+main.parent-home.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .admin-module-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 760px) {
+  html:has(.admin-clean-shell),
+  body:has(.admin-clean-shell),
+  #root:has(.admin-clean-shell) {
+    overflow: auto !important;
+  }
+
+  main.parent-home.admin-clean-shell {
+    height: auto !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+  }
+
+  main.parent-home.admin-clean-shell
+    > .admin-clean-content {
+    padding: 12px !important;
+    overflow-y: auto !important;
+  }
+
+  main.parent-home.admin-clean-shell
+    > .admin-clean-content
+    > .map-card.admin-reference-map-card.admin-dashboard-only {
+    height: calc(100dvh - 92px) !important;
+    min-height: 360px !important;
+  }
+}
+
+/* ============================================================
+   FINAL ADMIN DASHBOARD MAP SCOPE GUARD
+   The dashboard map/overview/actions are mounted only on Home.
+   ============================================================ */
+.admin-reference-dashboard.admin-has-menu .admin-dashboard-only {
+  display: none !important;
+}
+
+.admin-reference-dashboard:not(.admin-has-menu) .admin-dashboard-only {
+  display: block;
+}
+
+/* Never let an old legacy map rule create a second visible map
+   on an Admin module page. */
+.admin-reference-dashboard.admin-has-menu .map-card.admin-reference-map-card {
+  display: none !important;
+}
+
+/* Routes & Stops owns its own map and is deliberately outside the
+   dashboard-only map section. */
+.admin-reference-dashboard.admin-has-menu .attendance-card .leaflet-container {
+  display: block !important;
+}
+
+
+/* ============================================================
+   FINAL ADMIN MAP VISIBILITY RULE
+   Dashboard live map appears ONLY on the Admin Home page.
+   Routes & Stops keeps the map inside StopManagement.
+   ============================================================ */
+
+/* When any Admin module is selected, hide the dashboard map
+   and any other direct dashboard-only map from the content area. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .map-card {
+  display: none !important;
+}
+
+/* Keep the Route & Stop manager's OWN map visible because it is
+   nested inside its module card, not a direct child of the
+   Admin content area. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .attendance-card
+  .map-card {
+  display: block !important;
+}
+
+/* Never show the dashboard map on module pages, even if a legacy
+   class or previous rule tries to force it visible. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card {
+  display: none !important;
+}
+
+/* Dashboard home: show the dashboard map only when no module is
+   selected. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell:not(.admin-has-menu)
+  > .admin-clean-content
+  > .map-card.admin-reference-map-card {
+  display: block !important;
+}
+
+/* Dashboard page should not inherit module scrolling/layout. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell:not(.admin-has-menu)
+  > .admin-clean-content {
+  overflow: hidden !important;
+}
+
+/* Module pages use one normal scrolling content region. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Extra protection: the Admin dashboard map cannot appear
+   behind another module due to z-index or positioning. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .admin-reference-map-card {
+  position: relative !important;
+  z-index: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Route manager's inner map remains interactive. */
+main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
+  > .admin-clean-content
+  > .attendance-card
+  .leaflet-container {
+  pointer-events: auto !important;
 }

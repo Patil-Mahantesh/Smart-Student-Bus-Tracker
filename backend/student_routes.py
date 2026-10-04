@@ -1,28 +1,29 @@
 from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
-from secrets import token_urlsafe
-from pathlib import Path
+
+import secrets
+import string
 
 from auth import role_required
 from database import get_connection
 
 
 student_bp = Blueprint(
-    "students",
+    "student",
     __name__,
-    url_prefix="/api/students",
+    url_prefix="/api/students"
 )
 
 
 # ============================================================
-# HELPERS
+# GENERATE NEXT UNUSED STUDENT CODE
 # ============================================================
 
 def generate_student_code(connection):
     """
-    Generate the next student code.
+    Generate the next unused student code.
 
-    Example:
+    Examples:
         STU001
         STU002
         STU003
@@ -36,30 +37,36 @@ def generate_student_code(connection):
         """
     ).fetchall()
 
-    highest = 0
+    used_numbers = set()
 
     for row in rows:
-        code = row["student_code"] or ""
+        code = row["student_code"]
 
-        if not code.startswith("STU"):
+        if not code:
             continue
 
         suffix = code[3:]
 
         if suffix.isdigit():
-            highest = max(
-                highest,
-                int(suffix)
-            )
+            used_numbers.add(int(suffix))
 
-    return f"STU{highest + 1:03d}"
+    number = 1
 
+    while number in used_numbers:
+        number += 1
+
+    return f"STU{number:03d}"
+
+
+# ============================================================
+# GENERATE NEXT FAMILY/PARENT USERNAME
+# ============================================================
 
 def generate_parent_username(connection):
     """
-    Generate the next family login ID.
+    Generate the next unused family username.
 
-    Example:
+    Examples:
         parent00001
         parent00002
         parent00003
@@ -74,43 +81,47 @@ def generate_parent_username(connection):
         """
     ).fetchall()
 
-    highest = 0
+    highest_number = 0
 
     for row in rows:
-        username = row["username"] or ""
+        username = row["username"]
 
-        suffix = username[len("parent"):]
+        if not username:
+            continue
+
+        suffix = username[6:]
 
         if suffix.isdigit():
-            highest = max(
-                highest,
+            highest_number = max(
+                highest_number,
                 int(suffix)
             )
 
-    return f"parent{highest + 1:05d}"
+    return f"parent{highest_number + 1:05d}"
 
 
-def generate_temporary_password():
-    """
-    Generate a temporary family password.
+# ============================================================
+# GENERATE TEMPORARY PASSWORD
+# ============================================================
 
-    The password is returned only in the create-student
-    response so the Admin can provide it to the family.
-    """
+def generate_temporary_password(length=10):
+    characters = (
+        string.ascii_letters
+        + string.digits
+        + "!@#$"
+    )
 
-    return (
-        "Parent@"
-        + token_urlsafe(6)
-        .replace("-", "")
-        .replace("_", "")[:8]
+    return "".join(
+        secrets.choice(characters)
+        for _ in range(length)
     )
 
 
-def get_student_parent(connection, student_id):
-    """
-    Return the primary/first family account associated
-    with the student.
-    """
+# ============================================================
+# GET FAMILY DETAILS
+# ============================================================
+
+def get_parent_details(connection, parent_id):
 
     row = connection.execute(
         """
@@ -122,198 +133,23 @@ def get_student_parent(connection, student_id):
             p.mother_name,
             p.phone,
             p.email,
-            u.username
-        FROM student_parents sp
-        JOIN parents p
-          ON p.id = sp.parent_id
-        JOIN users u
-          ON u.id = p.user_id
-        WHERE sp.student_id = ?
-        ORDER BY
-            sp.is_primary DESC,
-            p.id ASC
-        LIMIT 1
+            u.username,
+            u.is_active
+
+        FROM parents p
+
+        INNER JOIN users u
+            ON u.id = p.user_id
+
+        WHERE p.id = ?
         """,
-        (student_id,)
+        (parent_id,)
     ).fetchone()
 
     if not row:
         return None
 
-    return {
-        "id": row["id"],
-        "user_id": row["user_id"],
-        "username": row["username"],
-        "name": row["name"],
-        "father_name": row["father_name"],
-        "mother_name": row["mother_name"],
-        "phone": row["phone"],
-        "email": row["email"],
-    }
-
-
-def get_student_dict(connection, student):
-    """
-    Convert a student DB row into the response structure
-    expected by the React Student Management screen.
-    """
-
-    face = connection.execute(
-        """
-        SELECT id
-        FROM face_embeddings
-        WHERE student_id = ?
-          AND is_active = 1
-        LIMIT 1
-        """,
-        (student["id"],)
-    ).fetchone()
-
-    parent = get_student_parent(
-        connection,
-        student["id"]
-    )
-
-    return {
-        "id": student["id"],
-        "student_code": student["student_code"],
-        "name": student["name"],
-        "class_name": student["class_name"],
-        "pickup_stop_id": student["pickup_stop_id"],
-        "drop_stop_id": student["drop_stop_id"],
-        "bus_id": student["bus_id"],
-        "status": student["status"],
-        "is_active": student["is_active"],
-        "created_at": student["created_at"],
-        "has_face": bool(face),
-        "parent": parent,
-    }
-
-
-def find_parent_by_username(connection, username):
-    """
-    Find an existing family account by parent username.
-    """
-
-    return connection.execute(
-        """
-        SELECT
-            p.id,
-            p.user_id,
-            p.name,
-            p.father_name,
-            p.mother_name,
-            p.phone,
-            p.email,
-            u.username
-        FROM parents p
-        JOIN users u
-          ON u.id = p.user_id
-        WHERE u.username = ?
-          AND u.role = 'PARENT'
-        LIMIT 1
-        """,
-        (username,)
-    ).fetchone()
-
-
-# ============================================================
-# LIST STUDENTS
-# ============================================================
-
-@student_bp.get("")
-@role_required("ADMIN")
-def list_students():
-
-    connection = get_connection()
-
-    try:
-
-        rows = connection.execute(
-            """
-            SELECT
-                id,
-                student_code,
-                name,
-                class_name,
-                pickup_stop_id,
-                drop_stop_id,
-                bus_id,
-                status,
-                is_active,
-                created_at
-            FROM students
-            WHERE is_active = 1
-            ORDER BY name COLLATE NOCASE
-            """
-        ).fetchall()
-
-        students = [
-            get_student_dict(
-                connection,
-                row
-            )
-            for row in rows
-        ]
-
-        return jsonify({
-            "success": True,
-            "students": students,
-            "count": len(students),
-        }), 200
-
-    finally:
-        connection.close()
-
-
-# ============================================================
-# GET ONE STUDENT
-# ============================================================
-
-@student_bp.get("/<int:student_id>")
-@role_required("ADMIN")
-def get_student(student_id):
-
-    connection = get_connection()
-
-    try:
-
-        row = connection.execute(
-            """
-            SELECT
-                id,
-                student_code,
-                name,
-                class_name,
-                pickup_stop_id,
-                drop_stop_id,
-                bus_id,
-                status,
-                is_active,
-                created_at
-            FROM students
-            WHERE id = ?
-            """,
-            (student_id,)
-        ).fetchone()
-
-        if not row:
-
-            return jsonify({
-                "success": False,
-                "message": "Student not found.",
-            }), 404
-
-        return jsonify({
-            "success": True,
-            "student": get_student_dict(
-                connection,
-                row
-            ),
-        }), 200
-
-    finally:
-        connection.close()
+    return dict(row)
 
 
 # ============================================================
@@ -326,236 +162,310 @@ def create_student():
 
     data = request.get_json(silent=True) or {}
 
-    name = str(
-        data.get("name") or ""
+    student_name = str(
+        data.get("name", "")
     ).strip()
 
     class_name = str(
-        data.get("class_name") or ""
+        data.get("class_name", "")
     ).strip()
 
     father_name = str(
-        data.get("father_name") or ""
+        data.get("father_name", "")
     ).strip()
 
     mother_name = str(
-        data.get("mother_name") or ""
-    ).strip()
-
-    parent_username = str(
-        data.get("parent_username") or ""
+        data.get("mother_name", "")
     ).strip()
 
     phone = str(
-        data.get("phone") or ""
+        data.get("phone", "")
     ).strip()
 
     email = str(
-        data.get("email") or ""
+        data.get("email", "")
     ).strip()
 
-    if not name:
+    # Optional:
+    # If supplied, this student will be linked
+    # to an existing family account.
+    existing_parent_username = str(
+        data.get("parent_username", "")
+    ).strip()
 
+    # Password is created by the Admin.
+    parent_password = str(
+        data.get("parent_password", "")
+    ).strip()
+
+    # ========================================================
+    # VALIDATION
+    # ========================================================
+
+    if not student_name:
         return jsonify({
             "success": False,
-            "message": "Student name is required.",
+            "message": "Student name is required."
         }), 400
 
     if not class_name:
-
         return jsonify({
             "success": False,
-            "message": "Class is required.",
+            "message": "Class is required."
         }), 400
 
+    if not parent_password:
+        return jsonify({
+            "success": False,
+            "message": "Parent password is required."
+        }), 400
+
+    if len(parent_password) < 6:
+        return jsonify({
+            "success": False,
+            "message": "Parent password must be at least 6 characters."
+        }), 400
+
+    # New family requires at least one parent.
     if (
         not father_name
         and not mother_name
-        and not parent_username
+        and not existing_parent_username
     ):
-
         return jsonify({
             "success": False,
             "message": (
-                "Enter at least one parent name "
-                "or an existing Parent ID."
-            ),
+                "At least one parent detail is required. "
+                "Enter father name or mother name."
+            )
         }), 400
 
     connection = get_connection()
 
     try:
 
-        # ----------------------------------------------------
-        # Resolve existing or create new family account
-        # ----------------------------------------------------
-
-        parent = None
-        temporary_password = None
-        parent_created = False
-
-        if parent_username:
-
-            parent = find_parent_by_username(
-                connection,
-                parent_username
-            )
-
-            if not parent:
-
-                return jsonify({
-                    "success": False,
-                    "message": (
-                        f"Parent ID '{parent_username}' "
-                        "was not found."
-                    ),
-                }), 404
-
-            # Update supplied family information without
-            # destroying existing values.
-            connection.execute(
-                """
-                UPDATE parents
-                SET
-                    father_name =
-                        CASE
-                            WHEN ? <> '' THEN ?
-                            ELSE father_name
-                        END,
-                    mother_name =
-                        CASE
-                            WHEN ? <> '' THEN ?
-                            ELSE mother_name
-                        END,
-                    phone =
-                        CASE
-                            WHEN ? <> '' THEN ?
-                            ELSE phone
-                        END,
-                    email =
-                        CASE
-                            WHEN ? <> '' THEN ?
-                            ELSE email
-                        END
-                WHERE id = ?
-                """,
-                (
-                    father_name,
-                    father_name,
-                    mother_name,
-                    mother_name,
-                    phone,
-                    phone,
-                    email,
-                    email,
-                    parent["id"],
-                )
-            )
-
-        else:
-
-            parent_username = generate_parent_username(
-                connection
-            )
-
-            temporary_password = (
-                generate_temporary_password()
-            )
-
-            parent_name = (
-                father_name
-                or mother_name
-                or "Parent"
-            )
-
-            user_cursor = connection.execute(
-                """
-                INSERT INTO users (
-                    username,
-                    password_hash,
-                    role,
-                    is_active
-                )
-                VALUES (?, ?, 'PARENT', 1)
-                """,
-                (
-                    parent_username,
-                    generate_password_hash(
-                        temporary_password
-                    ),
-                )
-            )
-
-            user_id = user_cursor.lastrowid
-
-            parent_cursor = connection.execute(
-                """
-                INSERT INTO parents (
-                    user_id,
-                    name,
-                    father_name,
-                    mother_name,
-                    phone,
-                    email
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    user_id,
-                    parent_name,
-                    father_name or None,
-                    mother_name or None,
-                    phone or None,
-                    email or None,
-                )
-            )
-
-            parent_id = parent_cursor.lastrowid
-
-            parent = {
-                "id": parent_id,
-                "user_id": user_id,
-                "username": parent_username,
-                "name": parent_name,
-                "father_name": father_name,
-                "mother_name": mother_name,
-                "phone": phone,
-                "email": email,
-            }
-
-            parent_created = True
-
-        # ----------------------------------------------------
-        # Create student
-        # ----------------------------------------------------
+        # ====================================================
+        # CREATE STUDENT
+        # ====================================================
 
         student_code = generate_student_code(
             connection
         )
 
-        student_cursor = connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO students (
                 student_code,
                 name,
                 class_name,
-                is_active,
-                status
+                is_active
             )
-            VALUES (?, ?, ?, 1, 'ACTIVE')
+            VALUES (?, ?, ?, 1)
             """,
             (
                 student_code,
-                name,
-                class_name,
+                student_name,
+                class_name
             )
         )
 
-        student_id = student_cursor.lastrowid
+        student_id = cursor.lastrowid
 
-        # ----------------------------------------------------
-        # Link student to family
-        # ----------------------------------------------------
+        # ====================================================
+        # EXISTING FAMILY
+        # ====================================================
+
+        if existing_parent_username:
+
+            parent_row = connection.execute(
+                """
+                SELECT
+                    p.id,
+                    p.user_id,
+                    p.name,
+                    p.father_name,
+                    p.mother_name,
+                    p.phone,
+                    p.email,
+                    u.username,
+                    u.is_active
+
+                FROM parents p
+
+                INNER JOIN users u
+                    ON u.id = p.user_id
+
+                WHERE u.username = ?
+                  AND u.role = 'PARENT'
+                """,
+                (existing_parent_username,)
+            ).fetchone()
+
+            if not parent_row:
+
+                connection.rollback()
+
+                return jsonify({
+                    "success": False,
+                    "message": (
+                        "The specified family account "
+                        "was not found."
+                    )
+                }), 404
+
+            parent_id = parent_row["id"]
+
+            # Admin-created password replaces the existing
+            # password for this parent account.
+            new_password_hash = generate_password_hash(
+                parent_password
+            )
+
+            connection.execute(
+                """
+                UPDATE users
+                SET password_hash = ?
+                WHERE id = ?
+                  AND role = 'PARENT'
+                """,
+                (
+                    new_password_hash,
+                    parent_row["user_id"]
+                )
+            )
+
+            connection.execute(
+                """
+                INSERT INTO student_parents (
+                    student_id,
+                    parent_id,
+                    relationship,
+                    is_primary
+                )
+                VALUES (?, ?, ?, 1)
+                """,
+                (
+                    student_id,
+                    parent_id,
+                    "FAMILY"
+                )
+            )
+
+            connection.commit()
+
+            return jsonify({
+                "success": True,
+
+                "message": (
+                    "Student created and linked to "
+                    "the existing family account. "
+                    "Proceed to face registration."
+                ),
+
+                "student": {
+                    "id": student_id,
+                    "student_code": student_code,
+                    "name": student_name,
+                    "class_name": class_name
+                },
+
+                "parent": {
+                    "id": parent_id,
+                    "username": parent_row["username"],
+                    "password": parent_password,
+                    "temporary_password": None,
+                    "father_name": parent_row["father_name"],
+                    "mother_name": parent_row["mother_name"]
+                },
+
+                "next_step": {
+                    "action": "FACE_REGISTRATION",
+                    "student_id": student_id
+                }
+            }), 201
+
+        # ====================================================
+        # CREATE NEW FAMILY ACCOUNT
+        # ====================================================
+
+        parent_username = generate_parent_username(
+            connection
+        )
+
+        password_hash = generate_password_hash(
+            parent_password
+        )
+
+        # Family display name.
+        if father_name and mother_name:
+            family_name = (
+                f"{father_name} & {mother_name}"
+            )
+        elif father_name:
+            family_name = father_name
+        else:
+            family_name = mother_name
+
+        # ====================================================
+        # CREATE USER
+        # ====================================================
+
+        user_cursor = connection.execute(
+            """
+            INSERT INTO users (
+                username,
+                password_hash,
+                role,
+                is_active
+            )
+            VALUES (?, ?, 'PARENT', 1)
+            """,
+            (
+                parent_username,
+                password_hash
+            )
+        )
+
+        user_id = user_cursor.lastrowid
+
+        # ====================================================
+        # CREATE FAMILY/PARENT RECORD
+        # ====================================================
+
+        parent_cursor = connection.execute(
+            """
+            INSERT INTO parents (
+                user_id,
+                name,
+                father_name,
+                mother_name,
+                phone,
+                email
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                family_name,
+                father_name or None,
+                mother_name or None,
+                phone or None,
+                email or None
+            )
+        )
+
+        parent_id = parent_cursor.lastrowid
+
+        # ====================================================
+        # LINK STUDENT TO FAMILY
+        # ====================================================
+
+        if father_name and mother_name:
+            relationship = "FATHER_MOTHER"
+        elif father_name:
+            relationship = "FATHER"
+        else:
+            relationship = "MOTHER"
 
         connection.execute(
             """
@@ -569,69 +479,55 @@ def create_student():
             """,
             (
                 student_id,
-                parent["id"],
-                "FAMILY",
+                parent_id,
+                relationship
             )
         )
 
         connection.commit()
 
-        student_row = connection.execute(
-            """
-            SELECT
-                id,
-                student_code,
-                name,
-                class_name,
-                pickup_stop_id,
-                drop_stop_id,
-                bus_id,
-                status,
-                is_active,
-                created_at
-            FROM students
-            WHERE id = ?
-            """,
-            (student_id,)
-        ).fetchone()
+        # ====================================================
+        # RESPONSE
+        # ====================================================
 
         return jsonify({
             "success": True,
+
             "message": (
-                "Student created successfully."
+                "Student created successfully. "
+                "Proceed to face registration."
             ),
-            "student": get_student_dict(
-                connection,
-                student_row
-            ),
+
+            "student": {
+                "id": student_id,
+                "student_code": student_code,
+                "name": student_name,
+                "class_name": class_name
+            },
+
             "parent": {
-                **parent,
-                "temporary_password":
-                    temporary_password,
-                    "created": parent_created,
+                "id": parent_id,
+                "username": parent_username,
+                "password": parent_password,
+                "temporary_password": None,
+                "father_name": father_name or None,
+                "mother_name": mother_name or None
             },
+
             "next_step": {
-                "student_id": student_id,
-                "action":
-                    "REGISTER_FACE",
-            },
+                "action": "FACE_REGISTRATION",
+                "student_id": student_id
+            }
         }), 201
 
     except Exception as error:
 
         connection.rollback()
 
-        print(
-            "Create student error:",
-            error
-        )
-
         return jsonify({
             "success": False,
-            "message": (
-                "Unable to create student."
-            ),
-            "error": str(error),
+            "message": "Unable to create student.",
+            "error": str(error)
         }), 500
 
     finally:
@@ -639,23 +535,310 @@ def create_student():
 
 
 # ============================================================
-# PERMANENT DELETE STUDENT
+# GET ALL STUDENTS
 # ============================================================
 
-@student_bp.delete("/<int:student_id>")
+@student_bp.get("")
 @role_required("ADMIN")
-def delete_student(student_id):
+def get_students():
 
     connection = get_connection()
 
     try:
 
+        rows = connection.execute(
+            """
+            SELECT
+                s.id,
+                s.student_code,
+                s.name,
+                s.class_name,
+                s.bus_id,
+                s.status,
+                s.is_active,
+                s.created_at,
+
+                p.id AS parent_id,
+                u.username AS parent_username,
+                p.father_name,
+                p.mother_name,
+
+                CASE
+                    WHEN fe.id IS NOT NULL
+                    THEN 1
+                    ELSE 0
+                END AS has_face
+
+            FROM students s
+
+            LEFT JOIN student_parents sp
+                ON sp.student_id = s.id
+                AND sp.is_primary = 1
+
+            LEFT JOIN parents p
+                ON p.id = sp.parent_id
+
+            LEFT JOIN users u
+                ON u.id = p.user_id
+
+            LEFT JOIN face_embeddings fe
+                ON fe.student_id = s.id
+                AND fe.is_active = 1
+
+            WHERE s.is_active = 1
+
+            ORDER BY s.id DESC
+            """
+        ).fetchall()
+
+        students = []
+
+        for row in rows:
+
+            students.append({
+                "id": row["id"],
+                "student_code": row["student_code"],
+                "name": row["name"],
+                "class_name": row["class_name"],
+                "bus_id": row["bus_id"],
+                "status": row["status"],
+                "is_active": bool(row["is_active"]),
+                "created_at": row["created_at"],
+
+                "parent": {
+                    "id": row["parent_id"],
+                    "username": row["parent_username"],
+                    "father_name": row["father_name"],
+                    "mother_name": row["mother_name"]
+                },
+
+                "has_face": bool(row["has_face"])
+            })
+
+        return jsonify({
+            "success": True,
+            "students": students,
+            "count": len(students)
+        })
+
+    finally:
+        connection.close()
+
+
+# ============================================================
+# GET SINGLE STUDENT
+# ============================================================
+
+@student_bp.get("/<int:student_id>")
+@role_required("ADMIN")
+def get_student(student_id):
+
+    connection = get_connection()
+
+    try:
+
+        row = connection.execute(
+            """
+            SELECT
+                s.id,
+                s.student_code,
+                s.name,
+                s.class_name,
+                s.bus_id,
+                s.status,
+                s.is_active,
+                s.created_at,
+
+                p.id AS parent_id,
+                u.username AS parent_username,
+                p.name AS family_name,
+                p.father_name,
+                p.mother_name,
+                p.phone,
+                p.email
+
+            FROM students s
+
+            LEFT JOIN student_parents sp
+                ON sp.student_id = s.id
+                AND sp.is_primary = 1
+
+            LEFT JOIN parents p
+                ON p.id = sp.parent_id
+
+            LEFT JOIN users u
+                ON u.id = p.user_id
+
+            WHERE s.id = ?
+            """,
+            (student_id,)
+        ).fetchone()
+
+        if not row:
+            return jsonify({
+                "success": False,
+                "message": "Student not found."
+            }), 404
+
+        face = connection.execute(
+            """
+            SELECT
+                id,
+                model_name,
+                model_version,
+                created_at,
+                updated_at
+
+            FROM face_embeddings
+
+            WHERE student_id = ?
+              AND is_active = 1
+
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (student_id,)
+        ).fetchone()
+
+        return jsonify({
+            "success": True,
+
+            "student": {
+                "id": row["id"],
+                "student_code": row["student_code"],
+                "name": row["name"],
+                "class_name": row["class_name"],
+                "bus_id": row["bus_id"],
+                "status": row["status"],
+                "is_active": bool(row["is_active"]),
+                "created_at": row["created_at"]
+            },
+
+            "parent": {
+                "id": row["parent_id"],
+                "username": row["parent_username"],
+                "family_name": row["family_name"],
+                "father_name": row["father_name"],
+                "mother_name": row["mother_name"],
+                "phone": row["phone"],
+                "email": row["email"]
+            },
+
+            "face": (
+                {
+                    "registered": True,
+                    "id": face["id"],
+                    "model_name": face["model_name"],
+                    "model_version": face["model_version"],
+                    "created_at": face["created_at"],
+                    "updated_at": face["updated_at"]
+                }
+                if face
+                else {
+                    "registered": False
+                }
+            )
+        })
+
+    finally:
+        connection.close()
+
+
+# ============================================================
+# GET STUDENTS FOR A FAMILY
+# ============================================================
+
+@student_bp.get("/parent/<int:parent_id>")
+@role_required("ADMIN")
+def get_parent_students(parent_id):
+
+    connection = get_connection()
+
+    try:
+
+        parent = get_parent_details(
+            connection,
+            parent_id
+        )
+
+        if not parent:
+            return jsonify({
+                "success": False,
+                "message": "Parent/family account not found."
+            }), 404
+
+        rows = connection.execute(
+            """
+            SELECT
+                s.id,
+                s.student_code,
+                s.name,
+                s.class_name,
+                sp.relationship,
+                sp.is_primary
+
+            FROM students s
+
+            INNER JOIN student_parents sp
+                ON sp.student_id = s.id
+
+            WHERE sp.parent_id = ?
+
+            ORDER BY s.id
+            """,
+            (parent_id,)
+        ).fetchall()
+
+        students = [
+            {
+                "id": row["id"],
+                "student_code": row["student_code"],
+                "name": row["name"],
+                "class_name": row["class_name"],
+                "relationship": row["relationship"],
+                "is_primary": bool(row["is_primary"])
+            }
+            for row in rows
+        ]
+
+        return jsonify({
+            "success": True,
+            "parent": parent,
+            "students": students
+        })
+
+    finally:
+        connection.close()
+
+
+# ============================================================
+# DELETE / DEACTIVATE STUDENT
+# ============================================================
+
+@student_bp.delete("/<int:student_id>")
+@role_required("ADMIN")
+def delete_student(student_id):
+    """
+    Soft-delete a student.
+
+    The student record is preserved so historical attendance,
+    notifications, reports, and relationships remain available.
+    The student is simply marked inactive.
+
+    The associated family/parent account is NOT deleted because
+    the same family may have other children.
+    """
+
+    connection = get_connection()
+
+    try:
         student = connection.execute(
             """
             SELECT
                 id,
                 student_code,
-                name
+                name,
+                is_active
             FROM students
             WHERE id = ?
             """,
@@ -663,124 +846,64 @@ def delete_student(student_id):
         ).fetchone()
 
         if not student:
-
             return jsonify({
                 "success": False,
-                "message": "Student not found.",
+                "message": "Student not found."
             }), 404
 
-        student_code = student["student_code"]
-        student_name = student["name"]
+        if not student["is_active"]:
+            return jsonify({
+                "success": False,
+                "message": "Student is already inactive."
+            }), 409
 
-        # Save face-file candidates before deleting DB data.
-        uploads_directory = (
-            Path(__file__).resolve().parent
-            / "uploads"
-            / "faces"
-        )
-
-        face_files = []
-
-        for extension in (
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp",
-        ):
-
-            file_path = (
-                uploads_directory
-                / f"{student_code}{extension}"
-            )
-
-            if file_path.exists():
-                face_files.append(file_path)
-
-        # ----------------------------------------------------
-        # IMPORTANT:
-        # The students table is referenced by
-        # student_parents, face_embeddings, attendance,
-        # travel_status and notifications with ON DELETE
-        # CASCADE in the current database schema.
-        #
-        # Therefore this DELETE permanently removes the
-        # student-specific records but does NOT delete the
-        # parent account.
-        # ----------------------------------------------------
-
-        cursor = connection.execute(
+        # Deactivate the student.
+        connection.execute(
             """
-            DELETE FROM students
+            UPDATE students
+            SET is_active = 0
             WHERE id = ?
             """,
             (student_id,)
         )
 
-        if cursor.rowcount != 1:
-
-            connection.rollback()
-
-            return jsonify({
-                "success": False,
-                "message": (
-                    "Student could not be deleted."
-                ),
-            }), 404
+        # Disable the student's active face embeddings.
+        # This prevents the student from being recognized again,
+        # while preserving the embedding history.
+        connection.execute(
+            """
+            UPDATE face_embeddings
+            SET is_active = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE student_id = ?
+              AND is_active = 1
+            """,
+            (student_id,)
+        )
 
         connection.commit()
-
-        # ----------------------------------------------------
-        # Remove physical face image(s)
-        # ----------------------------------------------------
-
-        deleted_face_files = 0
-
-        for file_path in face_files:
-
-            try:
-
-                file_path.unlink()
-                deleted_face_files += 1
-
-            except OSError as file_error:
-
-                # Database deletion remains successful.
-                print(
-                    "Warning: unable to delete face image "
-                    f"{file_path}: {file_error}"
-                )
 
         return jsonify({
             "success": True,
             "message": (
-                f"Student {student_name} "
-                f"({student_code}) was permanently deleted."
+                f"Student {student['name']} "
+                f"({student['student_code']}) has been deactivated."
             ),
             "student": {
-                "id": student_id,
-                "student_code": student_code,
-                "name": student_name,
-            },
-            "deleted_face_files":
-                deleted_face_files,
+                "id": student["id"],
+                "student_code": student["student_code"],
+                "name": student["name"],
+                "is_active": False
+            }
         }), 200
 
     except Exception as error:
-
         connection.rollback()
-
-        print(
-            "Permanent student deletion error:",
-            error
-        )
 
         return jsonify({
             "success": False,
-            "message": (
-                "Unable to permanently delete "
-                "the student."
-            ),
-            "error": str(error),
+            "message": "Unable to deactivate student.",
+            "error": str(error)
         }), 500
 
     finally:

@@ -298,6 +298,7 @@ function App() {
       phone: "",
       email: "",
       parent_username: "",
+      parent_password: "",
     });
 
   const [selectedStudentId, setSelectedStudentId] =
@@ -1882,6 +1883,7 @@ function App() {
       phone: "",
       email: "",
       parent_username: "",
+      parent_password: "",
     });
 
     setStudentCreateMessage("");
@@ -1936,6 +1938,26 @@ function App() {
 
       setStudentCreateMessage(
         "At least one parent name is required, unless an existing Parent ID is used."
+      );
+
+      return;
+
+    }
+
+    if (!studentForm.parent_password.trim()) {
+
+      setStudentCreateMessage(
+        "Parent password is required."
+      );
+
+      return;
+
+    }
+
+    if (studentForm.parent_password.trim().length < 6) {
+
+      setStudentCreateMessage(
+        "Parent password must be at least 6 characters."
       );
 
       return;
@@ -2028,6 +2050,8 @@ function App() {
         mother_name: "",
         phone: "",
         email: "",
+        parent_username: "",
+        parent_password: "",
       });
 
     } catch (error) {
@@ -2355,16 +2379,6 @@ function App() {
 
     }
 
-    if (parentBusIntervalRef.current !== null) {
-
-      clearInterval(
-        parentBusIntervalRef.current
-      );
-
-      parentBusIntervalRef.current = null;
-
-    }
-
     activeTripIdRef.current = null;
 
     localStorage.removeItem("token");
@@ -2384,7 +2398,8 @@ function App() {
     setTripStatus("NOT_STARTED");
 
     setDriverLocation(null);
-    setParentBusLocation(null);
+    setBusLocation(null);
+    setBusLocationStatus("Waiting for live bus location");
     setGpsStatus("GPS not started");
 
   };
@@ -5245,7 +5260,7 @@ function App() {
 
     return (
 
-      <main className="parent-home admin-reference-dashboard">
+      <main className={`parent-home admin-reference-dashboard admin-clean-shell ${selectedMenu ? "admin-has-menu" : ""}`}>
 
         <header className="parent-header admin-reference-header">
 
@@ -5296,11 +5311,227 @@ function App() {
         </header>
 
 
-        <FlowMenu
-          items={currentMenu}
-          activeItem={selectedMenu}
-          onSelect={handleMenuSelect}
-        />
+        <aside className="admin-sidebar">
+
+          {/* BRAND */}
+          <div className="admin-sidebar-brand">
+
+            <div className="admin-sidebar-logo">
+              🚌
+            </div>
+
+            <div>
+              <strong>Smart Student Bus</strong>
+              <span>Administration</span>
+            </div>
+
+          </div>
+
+
+          {/* WORKSPACE */}
+          <div className="admin-sidebar-section">
+
+            <p className="admin-sidebar-label">
+              WORKSPACE
+            </p>
+
+
+            <button
+              className={
+                !selectedMenu
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu(null)}
+            >
+              <span>🏠</span>
+              <span>Dashboard</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "students" ||
+                selectedMenu === "student-management"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("students")}
+            >
+              <span>👨‍🎓</span>
+              <span>Students</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "buses"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("buses")}
+            >
+              <span>🚌</span>
+              <span>Buses</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "drivers"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("drivers")}
+            >
+              <span>👨‍✈️</span>
+              <span>Drivers</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "parents"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("parents")}
+            >
+              <span>👨‍👩‍👧</span>
+              <span>Parents</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "stop-management"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("stop-management")}
+            >
+              <span>🗺️</span>
+              <span>Routes & Stops</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "live-bus-location"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("live-bus-location")}
+            >
+              <span>📍</span>
+              <span>Live Bus Tracking</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "attendance"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("attendance")}
+            >
+              <span>📊</span>
+              <span>Attendance</span>
+            </button>
+
+          </div>
+
+
+          {/* COMMUNICATION */}
+          <div className="admin-sidebar-section">
+
+            <p className="admin-sidebar-label">
+              COMMUNICATION
+            </p>
+
+
+            <button
+              className={
+                selectedMenu === "notifications"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("notifications")}
+            >
+              <span>🔔</span>
+              <span>Notifications</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "announcements"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("announcements")}
+            >
+              <span>📢</span>
+              <span>Announcements</span>
+            </button>
+
+          </div>
+
+
+          {/* SYSTEM */}
+          <div className="admin-sidebar-section">
+
+            <p className="admin-sidebar-label">
+              SYSTEM
+            </p>
+
+
+            <button
+              className={
+                selectedMenu === "settings"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("settings")}
+            >
+              <span>⚙️</span>
+              <span>Settings</span>
+            </button>
+
+
+            <button
+              className={
+                selectedMenu === "my-profile"
+                  ? "admin-sidebar-item active"
+                  : "admin-sidebar-item"
+              }
+              onClick={() => setSelectedMenu("my-profile")}
+            >
+              <span>👤</span>
+              <span>My Profile</span>
+            </button>
+
+          </div>
+
+
+          {/* LOGOUT */}
+          <div className="admin-sidebar-bottom">
+
+            <button
+              className="admin-sidebar-item admin-logout-item"
+              onClick={logout}
+            >
+              <span>🚪</span>
+              <span>Logout</span>
+            </button>
+
+          </div>
+
+        </aside>
+
+
+        <div className="admin-clean-content">
 
 
         {selectedMenu === "stop-management" && (
@@ -5401,13 +5632,15 @@ function App() {
                   </strong>
                 </p>
 
-                {createdParentCredentials.temporary_password && (
+                {(createdParentCredentials.password ||
+                  createdParentCredentials.temporary_password) && (
 
                   <p style={{ margin: "4px 0" }}>
-                    Temporary Password:
+                    Parent Password:
                     {" "}
                     <strong>
-                      {createdParentCredentials.temporary_password}
+                      {createdParentCredentials.password ||
+                        createdParentCredentials.temporary_password}
                     </strong>
                   </p>
 
@@ -5415,7 +5648,8 @@ function App() {
 
                 <small>
                   Save these credentials and provide them
-                  to the family.
+                  to the family. The password is shown here only
+                  after it is created or changed by the Admin.
                 </small>
 
               </div>
@@ -5441,7 +5675,8 @@ function App() {
                 </h3>
 
                 <p>
-                  At least one parent name is required, or enter an existing Parent ID.
+                  Enter the parent details and create a password for the parent account.
+                  If an existing Parent ID is used, the password will be changed for that account.
                 </p>
 
 
@@ -5581,6 +5816,34 @@ function App() {
                         )
                       }
                       placeholder="Example: parent00001 (optional)"
+                    />
+
+                  </label>
+
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                    }}
+                  >
+                    Parent Password
+
+                    <input
+                      type="password"
+                      value={studentForm.parent_password}
+                      onChange={(event) =>
+                        setStudentForm(
+                          (previous) => ({
+                            ...previous,
+                            parent_password: event.target.value,
+                          })
+                        )
+                      }
+                      placeholder="Create password (min 6 characters)"
+                      minLength={6}
+                      required
                     />
 
                   </label>
@@ -5785,6 +6048,16 @@ function App() {
                         <strong>
                           {student.parent?.username ||
                             "Not assigned"}
+                        </strong>
+                      </p>
+
+
+                      <p style={{ margin: "4px 0", color: "#64748b" }}>
+                        Parent Password:
+                        {" "}
+                        <strong>
+                          {student.parent?.password ||
+                            "Hidden — create/reset from Admin"}
                         </strong>
                       </p>
 
@@ -6009,9 +6282,20 @@ function App() {
 
         )}
 
+        {/* ========================================================
+           ADMIN DASHBOARD-ONLY CONTENT
+           These sections are rendered ONLY when no Admin module
+           is selected. Therefore the live dashboard map cannot
+           appear on Students, Buses, Drivers, Parents, Attendance,
+           Notifications, Settings, Profile, etc.
+           Routes & Stops has its own map inside StopManagement.
+           ======================================================== */}
+        {selectedMenu === null && (
+          <>
+
         {/* SYSTEM OVERVIEW */}
 
-        <section className="bus-info-card admin-reference-summary-card">
+        <section className="bus-info-card admin-reference-summary-card admin-dashboard-only">
 
           <p className="section-label">
             System Overview
@@ -6118,7 +6402,7 @@ function App() {
 
         {/* LIVE BUS TRACKING */}
 
-        <section className="map-card admin-reference-map-card">
+        <section className="map-card admin-reference-map-card admin-dashboard-only">
 
           <div
             style={{
@@ -6248,7 +6532,7 @@ function App() {
 
         {/* ADMIN ACTIONS */}
 
-        <div className="parent-actions admin-reference-quick-access">
+        <div className="parent-actions admin-reference-quick-access admin-dashboard-only">
 
           <button
             className="action-card"
@@ -6399,6 +6683,12 @@ function App() {
           </button>
 
         </div>
+
+          </>
+        )}
+
+      </div>
+
 
       </main>
 
