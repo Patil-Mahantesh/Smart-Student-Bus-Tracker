@@ -494,6 +494,25 @@ def get_student_attendance(student_id):
 
     try:
 
+        if g.user.get("role") == "PARENT":
+            parent = connection.execute("""
+                SELECT p.id
+                FROM parents p
+                INNER JOIN student_parents sp
+                    ON sp.parent_id = p.id
+                WHERE p.user_id = ?
+                  AND sp.student_id = ?
+            """, (
+                g.user["user_id"],
+                student_id
+            )).fetchone()
+
+            if not parent:
+                return jsonify({
+                    "success": False,
+                    "message": "You are not authorized for this student"
+                }), 403
+
         records = connection.execute("""
             SELECT
                 id,

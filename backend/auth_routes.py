@@ -1,4 +1,6 @@
+
 import uuid
+import logging
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -9,6 +11,8 @@ from config import Config
 from database import get_connection
 
 
+logger = logging.getLogger(__name__)
+
 auth_bp = Blueprint(
     "auth",
     __name__,
@@ -18,23 +22,35 @@ auth_bp = Blueprint(
 
 @auth_bp.post("/login")
 def login():
+    data = request.get_json(silent=True)
 
-    data = request.get_json() or {}
-
-    username = data.get("username")
-    password = data.get("password")
-
-    if not username or not password:
+    if not isinstance(data, dict):
         return jsonify({
             "success": False,
             "message": "Username and password are required"
         }), 400
 
-    connection = get_connection()
+    username = data.get("username")
+    password = data.get("password")
+
+    if (
+        not isinstance(username, str)
+        or not username.strip()
+        or not isinstance(password, str)
+        or not password
+    ):
+        return jsonify({
+            "success": False,
+            "message": "Username and password are required"
+        }), 400
+
+    connection = None
 
     try:
+        connection = get_connection()
 
-        user = connection.execute("""
+        user = connection.execute(
+            """
             SELECT
                 id,
                 username,
@@ -43,7 +59,9 @@ def login():
                 is_active
             FROM users
             WHERE username = ?
-        """, (username,)).fetchone()
+            """,
+            (username.strip(),)
+        ).fetchone()
 
         if not user:
             return jsonify({
@@ -66,7 +84,13 @@ def login():
                 "message": "Invalid username or password"
             }), 401
 
-        jti = str(uuid.uuid4())
+        if not Config.SECRET_KEY:
+            logger.error("JWT secret key is not configured")
+            return jsonify({
+                "success": False,
+                "message": "Unable to login",
+                "error": "INTERNAL_ERROR"
+            }), 500
 
         now = datetime.now(timezone.utc)
 
@@ -74,7 +98,7 @@ def login():
             "user_id": user["id"],
             "username": user["username"],
             "role": user["role"],
-            "jti": jti,
+            "jti": str(uuid.uuid4()),
             "iat": now,
             "exp": now + timedelta(hours=8)
         }
@@ -96,15 +120,20 @@ def login():
             }
         }), 200
 
-    except Exception as error:
-
-        print("Login error:", error)
+    except Exception:
+        logger.exception("Login request failed")
 
         return jsonify({
             "success": False,
             "message": "Unable to login",
-            "error": str(error)
+            "error": "INTERNAL_ERROR"
         }), 500
 
     finally:
-        connection.close()
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                logger.exception(
+                    "Failed to close login database connection"
+                )

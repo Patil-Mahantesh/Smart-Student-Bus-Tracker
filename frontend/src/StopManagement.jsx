@@ -118,6 +118,30 @@ function MapRecenter({
   return null;
 }
 
+function ResponsiveMapSize() {
+  const map = useMap();
+
+  useEffect(() => {
+    const resizeMap = () => {
+      map.invalidateSize({ pan: false });
+    };
+
+    const container = map.getContainer();
+    const observer = new ResizeObserver(resizeMap);
+
+    observer.observe(container);
+    window.addEventListener("resize", resizeMap);
+    requestAnimationFrame(resizeMap);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", resizeMap);
+    };
+  }, [map]);
+
+  return null;
+}
+
 
 // ============================================================
 // STOP MANAGEMENT
@@ -214,6 +238,12 @@ export default function StopManagement({
   useEffect(() => {
     loadStops();
   }, [token]);
+
+  useEffect(() => {
+    if (!selectedRouteId && routes.length) {
+      setSelectedRouteId(routes[0].id);
+    }
+  }, [routes, selectedRouteId]);
 
 
   // ----------------------------------------------------------
@@ -1177,6 +1207,8 @@ export default function StopManagement({
             attribution='&copy; OpenStreetMap contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+
+          <ResponsiveMapSize />
 
           <MapRecenter
             location={location}

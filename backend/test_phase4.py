@@ -3,7 +3,7 @@ import unittest
 
 sys.path.insert(0, ".")
 
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import app
 from database import get_connection
@@ -20,6 +20,28 @@ class Phase4AuthTests(unittest.TestCase):
         cls.bus_id = connection.execute(
             "SELECT bus_id FROM students WHERE id = ?", (cls.student_id,)
         ).fetchone()["bus_id"]
+        parent2 = connection.execute(
+            "SELECT id FROM users WHERE username = 'parent2' AND role = 'PARENT'"
+        ).fetchone()
+        if parent2:
+            parent2_id = parent2["id"]
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (generate_password_hash("Parent@123"), parent2_id),
+            )
+        else:
+            parent2_id = connection.execute(
+                """
+                INSERT INTO users (username, password_hash, role)
+                VALUES (?, ?, 'PARENT')
+                """,
+                ("parent2", generate_password_hash("Parent@123")),
+            ).lastrowid
+        connection.execute(
+            "INSERT OR IGNORE INTO parents (user_id, name) VALUES (?, ?)",
+            (parent2_id, "Phase 4 Parent"),
+        )
+        connection.commit()
         connection.close()
 
     def login(self, username, password):
@@ -55,7 +77,7 @@ class Phase4AuthTests(unittest.TestCase):
     def test_parent_cannot_access_another_parent_student(self):
         headers = self.login("parent2", "Parent@123")
         response = self.client.get(f"/api/students/{self.student_id}", headers=headers)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
 
     def test_driver_cannot_access_unassigned_bus(self):
         headers = self.login("driver1", "Driver@123")

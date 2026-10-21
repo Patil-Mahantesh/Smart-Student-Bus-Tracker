@@ -8369,699 +8369,496 @@ body:has(.admin-reference-dashboard),
   }
 }
 
-
 /* ============================================================
-   ADMIN HOME — AUTHORITATIVE FINAL SHELL
-   Current JSX: header + sidebar + content wrapper.
-   One sidebar. One header. One content scroll area.
+   FIGMA STUDENT INTELLIGENCE — FINAL VISUAL LAYER
    ============================================================ */
-html:has(.admin-clean-shell), body:has(.admin-clean-shell), #root:has(.admin-clean-shell) {
+
+.figma-student-page {
+  --figma-bg: #030508;
+  --figma-panel: #08111a;
+  --figma-panel-2: #0b1622;
+  --figma-border: rgba(255,255,255,.09);
+  --figma-border-strong: rgba(34,211,238,.22);
+  --figma-text: #f8fafc;
+  --figma-muted: #94a3b8;
+  --figma-dim: #64748b;
+  --figma-blue: #1677ff;
+  --figma-cyan: #22d3ee;
+  --figma-green: #22c55e;
+  --figma-amber: #f59e0b;
+  --figma-red: #ef4444;
+
+  position: relative !important;
   width: 100% !important;
-  height: 100% !important;
+  max-width: none !important;
   margin: 0 !important;
-  padding: 0 !important;
+  padding: 32px !important;
   overflow: hidden !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell {
-  display: grid !important;
-  grid-template-columns: 232px minmax(0, 1fr) !important;
-  grid-template-rows: 76px minmax(0, 1fr) !important;
-  grid-template-areas: "sidebar header" "sidebar content" !important;
-  width: 100% !important;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  position: relative !important;
-  background: #f4f7fb !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
-  grid-area: header !important;
-  position: relative !important;
-  inset: auto !important;
-  z-index: 20 !important;
-  width: 100% !important;
-  height: 76px !important;
-  min-height: 76px !important;
-  margin: 0 !important;
-  padding: 0 28px !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  background: #fff !important;
-  border: 0 !important;
-  border-bottom: 1px solid #e7ebf2 !important;
+  background:
+    radial-gradient(circle at 78% 8%, rgba(22,119,255,.13), transparent 28%),
+    radial-gradient(circle at 12% 80%, rgba(34,211,238,.055), transparent 25%),
+    var(--figma-bg) !important;
+  border: 1px solid var(--figma-border) !important;
   border-radius: 0 !important;
-  box-shadow: 0 2px 12px rgba(15,23,42,.04) !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
-  grid-area: sidebar !important;
-  position: relative !important;
-  inset: auto !important;
-  z-index: 30 !important;
-  width: 232px !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 22px 12px 16px !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  background: #fff !important;
-  border: 0 !important;
-  border-right: 1px solid #e5eaf1 !important;
-  border-radius: 0 !important;
+  color: var(--figma-text) !important;
   box-shadow: none !important;
+  isolation: isolate;
 }
 
-.admin-reference-dashboard.admin-clean-shell > .admin-sidebar::-webkit-scrollbar { width: 6px; }
-.admin-reference-dashboard.admin-clean-shell > .admin-sidebar::-webkit-scrollbar-thumb { background: #cbd3de; border-radius: 999px; }
-
-.admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
-  grid-area: content !important;
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 22px 24px 28px !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 320px !important;
-  grid-auto-rows: max-content !important;
-  align-content: start !important;
-  gap: 18px !important;
-  background: #f4f7fb !important;
+.figma-student-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .3;
+  background-image:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
 }
 
-.admin-reference-dashboard.admin-clean-shell > .admin-clean-content::-webkit-scrollbar { width: 8px; }
-.admin-reference-dashboard.admin-clean-shell > .admin-clean-content::-webkit-scrollbar-thumb { background: #cbd3de; border-radius: 999px; }
-
-.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only {
-  grid-column: 1 / -1 !important;
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: auto !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 18px !important;
-  box-sizing: border-box !important;
-  background: #fff !important;
-  border: 1px solid #e5eaf1 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+.figma-student-page,
+.figma-student-page * {
+  box-sizing: border-box;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0,1fr)) !important;
-  gap: 12px !important;
+.figma-student-page h2,
+.figma-student-page h3,
+.figma-student-page strong,
+.figma-student-page p,
+.figma-student-page span,
+.figma-student-page small,
+.figma-student-page label {
+  color: inherit !important;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-item {
-  min-width: 0 !important;
-  min-height: 78px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  padding: 13px !important;
-  box-sizing: border-box !important;
-  background: #f8fafc !important;
-  border: 1px solid #e7ecf3 !important;
-  border-radius: 13px !important;
+.figma-student-heading {
+  position: relative;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 0 28px;
+  border-bottom: 1px solid var(--figma-border);
 }
 
-.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only {
-  grid-column: 1 !important;
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: 500px !important;
-  min-height: 500px !important;
-  max-height: 500px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  background: #e8edf4 !important;
-  border: 1px solid #e1e7ef !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
+.figma-student-heading::after {
+  content: "STUDENT NETWORK / 01";
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: var(--figma-dim);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
 }
 
-.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only > div:first-child {
-  position: relative !important;
-  width: 100% !important;
-  height: calc(100% - 74px) !important;
-  min-height: 0 !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only .leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only > div:last-child {
-  position: absolute !important;
-  left: 12px !important;
-  right: 12px !important;
-  bottom: 12px !important;
-  width: auto !important;
-  min-height: 56px !important;
-  margin: 0 !important;
-  padding: 10px 14px !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
-  background: rgba(255,255,255,.97) !important;
-  border: 1px solid #e3e8ef !important;
-  border-radius: 13px !important;
-  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
-  grid-column: 2 !important;
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: 500px !important;
-  min-height: 500px !important;
-  margin: 0 !important;
-  padding: 18px !important;
-  box-sizing: border-box !important;
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  align-content: start !important;
-  gap: 10px !important;
-  overflow: hidden !important;
-  background: #fff !important;
-  border: 1px solid #e5eaf1 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
-}
-
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only::before {
-  content: "QUICK ACTIONS" !important;
-  display: block !important;
-  margin: 0 0 2px !important;
-  color: #748197 !important;
+.figma-kicker {
+  margin-bottom: 8px !important;
+  color: var(--figma-cyan) !important;
   font-size: 10px !important;
   font-weight: 800 !important;
-  letter-spacing: .08em !important;
+  letter-spacing: .18em !important;
+  text-transform: uppercase;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card {
-  width: 100% !important;
-  min-height: 62px !important;
+.figma-student-heading h2 {
   margin: 0 !important;
-  padding: 10px 12px !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  text-align: left !important;
-  border: 1px solid #e6ebf2 !important;
-  border-radius: 12px !important;
-  background: #fff !important;
+  font-size: clamp(34px, 4vw, 58px) !important;
+  line-height: .96 !important;
+  font-weight: 650 !important;
+  letter-spacing: -.045em !important;
+  color: var(--figma-text) !important;
+}
+
+.figma-student-heading p:last-child {
+  max-width: 620px;
+  margin: 12px 0 0 !important;
+  color: var(--figma-muted) !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+}
+
+.figma-student-heading > div:first-child {
+  min-width: 0;
+}
+
+.figma-student-heading > button {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+  margin-top: 20px;
+}
+
+.figma-student-list-wrap {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--figma-border);
+  background: rgba(8,17,26,.86);
+}
+
+.figma-student-toolbar {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 150px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--figma-border);
+  background: rgba(255,255,255,.02);
+}
+
+.figma-student-search-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.figma-student-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-52%);
+  color: var(--figma-dim);
+  font-size: 19px;
+  pointer-events: none;
+}
+
+.figma-student-search-wrap input {
+  width: 100% !important;
+  height: 46px !important;
+  margin: 0 !important;
+  padding: 0 14px 0 42px !important;
+  border: 1px solid var(--figma-border) !important;
+  border-radius: 3px !important;
+  outline: none !important;
+  background: #050b12 !important;
+  color: var(--figma-text) !important;
+  font-size: 13px !important;
   box-shadow: none !important;
-  transform: none !important;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card > span {
-  width: 38px !important;
-  height: 38px !important;
-  flex: 0 0 38px !important;
-  display: grid !important;
-  place-items: center !important;
-  border-radius: 10px !important;
-  background: #f1f5f9 !important;
+.figma-student-search-wrap input::placeholder {
+  color: #506176 !important;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card strong {
-  display: block !important;
-  font-size: 12px !important;
-  font-weight: 750 !important;
+.figma-student-search-wrap input:focus {
+  border-color: var(--figma-border-strong) !important;
+  box-shadow: 0 0 0 2px rgba(22,119,255,.08) !important;
 }
 
-.admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only .action-card p {
-  display: block !important;
-  margin: 3px 0 0 !important;
-  font-size: 10px !important;
-  color: #8a96a8 !important;
+.figma-student-filter {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
-.admin-reference-dashboard.admin-clean-shell .flow-menu,
-.admin-reference-dashboard.admin-clean-shell .admin-style-bottom-nav {
-  display: none !important;
+.figma-student-filter span {
+  color: var(--figma-dim) !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: .16em;
 }
 
-.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content {
-  display: block !important;
-  padding: 22px 24px 28px !important;
+.figma-student-filter select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--figma-border);
+  border-radius: 2px;
+  outline: none;
+  background: #050b12;
+  color: var(--figma-text);
+  padding: 0 10px;
+  font-size: 11px;
 }
 
-.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .admin-dashboard-only {
-  display: none !important;
+.figma-student-results {
+  align-self: end;
+  justify-self: end;
+  color: var(--figma-dim) !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  letter-spacing: .16em;
+  white-space: nowrap;
 }
 
-.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .attendance-card,
-.admin-reference-dashboard.admin-clean-shell.admin-has-menu > .admin-clean-content > .admin-module-page {
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  max-width: none !important;
-  min-height: 0 !important;
-  height: auto !important;
-  margin: 0 !important;
-  padding: 22px !important;
-  box-sizing: border-box !important;
-  overflow: visible !important;
-  background: #fff !important;
-  border: 1px solid #e5eaf1 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 18px rgba(15,23,42,.05) !important;
-  z-index: 1 !important;
+.figma-student-table {
+  width: 100%;
 }
 
-@media (max-width: 1100px) {
-  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
-    grid-template-columns: 1fr !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only,
-  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
-    grid-column: 1 !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell .admin-reference-quick-access.admin-dashboard-only {
-    height: auto !important;
-    min-height: 0 !important;
-  }
+.figma-student-thead,
+.figma-student-row {
+  display: grid;
+  grid-template-columns: 1.45fr .9fr 1.05fr .95fr .75fr .75fr 1.15fr;
+  min-width: 1100px;
 }
 
-@media (max-width: 760px) {
-  .admin-reference-dashboard.admin-clean-shell {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: 68px minmax(0,1fr) !important;
-    grid-template-areas: "header" "content" !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell > .admin-reference-header {
-    grid-area: header !important;
-    height: 68px !important;
-    min-height: 68px !important;
-    padding: 0 14px !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell > .admin-sidebar {
-    display: none !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
-    grid-area: content !important;
-    padding: 14px !important;
-    grid-template-columns: 1fr !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell .admin-reference-summary-card.admin-dashboard-only .bus-info-grid {
-    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
-  }
-  .admin-reference-dashboard.admin-clean-shell .map-card.admin-reference-map-card.admin-dashboard-only {
-    height: 380px !important;
-    min-height: 380px !important;
-    max-height: 380px !important;
-  }
+.figma-student-thead {
+  min-height: 50px;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--figma-border);
+  background: rgba(255,255,255,.018);
 }
 
-/* ============================================================
-   ADMIN HOME — FINAL CLEAN VERSION
-   User-approved structure: ONE sidebar, ONE header, ONE large map.
-   Remove the crossed-out System Overview and Quick Access panels.
-   ============================================================ */
-
-/* The crossed-out dashboard summary and quick-access panels are not
-   part of the clean Admin home. Keep them out of the layout entirely. */
-.admin-reference-dashboard.admin-clean-shell
-  .admin-reference-summary-card.admin-dashboard-only,
-.admin-reference-dashboard.admin-clean-shell
-  .admin-reference-quick-access.admin-dashboard-only {
-  display: none !important;
+.figma-student-thead span {
+  color: var(--figma-dim) !important;
+  font-size: 8px !important;
+  font-weight: 850 !important;
+  letter-spacing: .15em;
+  text-transform: uppercase;
 }
 
-/* With only the live map on Admin Home, use the whole content width. */
-.admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
-  display: block !important;
-  padding: 22px 24px 28px !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  box-sizing: border-box !important;
+.figma-student-row {
+  position: relative;
+  min-height: 84px;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(255,255,255,.055);
+  transition: background .18s ease, border-color .18s ease;
 }
 
-/* Make the Admin map the single main dashboard surface. */
-.admin-reference-dashboard.admin-clean-shell
-  .map-card.admin-reference-map-card.admin-dashboard-only {
-  display: block !important;
-  position: relative !important;
-  inset: auto !important;
-  width: 100% !important;
-  height: calc(100% - 2px) !important;
-  min-height: calc(100dvh - 126px) !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  background: #e8edf4 !important;
-  border: 1px solid #e1e7ef !important;
-  border-radius: 18px !important;
-  box-shadow: 0 8px 24px rgba(15,23,42,.07) !important;
+.figma-student-row:last-child {
+  border-bottom: 0;
 }
 
-.admin-reference-dashboard.admin-clean-shell
-  .map-card.admin-reference-map-card.admin-dashboard-only > div:first-child {
-  width: 100% !important;
-  height: calc(100% - 78px) !important;
-  min-height: 0 !important;
-  position: relative !important;
+.figma-student-row:hover {
+  background: linear-gradient(90deg, rgba(22,119,255,.055), rgba(34,211,238,.018));
+  border-bottom-color: rgba(34,211,238,.10);
 }
 
-.admin-reference-dashboard.admin-clean-shell
-  .map-card.admin-reference-map-card.admin-dashboard-only .leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
+.figma-student-cell {
+  min-width: 0;
+  padding-right: 14px;
 }
 
-.admin-reference-dashboard.admin-clean-shell
-  .map-card.admin-reference-map-card.admin-dashboard-only > div:last-child {
-  position: absolute !important;
-  left: 14px !important;
-  right: 14px !important;
-  bottom: 14px !important;
-  min-height: 56px !important;
-  margin: 0 !important;
-  padding: 10px 16px !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 12px !important;
-  background: rgba(255,255,255,.97) !important;
-  border: 1px solid #e3e8ef !important;
-  border-radius: 14px !important;
-  box-shadow: 0 10px 24px rgba(15,23,42,.10) !important;
-}
-
-/* Do not let any legacy Admin-home absolute positioning resurrect. */
-.admin-reference-dashboard.admin-clean-shell
-  > .admin-clean-content
-  > .admin-dashboard-only {
-  position: static !important;
-  inset: auto !important;
-}
-
-/* Selected modules still occupy the entire content region cleanly. */
-.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content {
-  display: block !important;
-  padding: 22px 24px 28px !important;
-}
-
-@media (max-width: 760px) {
-  .admin-reference-dashboard.admin-clean-shell > .admin-clean-content {
-    padding: 14px !important;
-  }
-
-  .admin-reference-dashboard.admin-clean-shell
-    .map-card.admin-reference-map-card.admin-dashboard-only {
-    min-height: calc(100dvh - 96px) !important;
-    height: calc(100dvh - 96px) !important;
-    border-radius: 14px !important;
-  }
-}
-
-
-/* ============================================================
-   ADMIN HOME — TRUE FULL-WIDTH / FULL-HEIGHT FINAL OVERRIDE
-   Fixes legacy max-width and padding rules from .parent-header,
-   .map-card and .parent-actions.
-   ============================================================ */
-
-/* The Admin shell must use the entire browser viewport. */
-html:has(.admin-clean-shell),
-body:has(.admin-clean-shell),
-#root:has(.admin-clean-shell) {
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-
-/* Override the old .parent-home padding and any width limitation. */
-main.parent-home.admin-clean-shell {
-  width: 100vw !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Header: full remaining width beside the single sidebar. */
-main.parent-home.admin-clean-shell > .admin-reference-header {
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 0 28px !important;
-  justify-self: stretch !important;
-}
-
-/* Content: no hidden max-width and no unnecessary bottom padding. */
-main.parent-home.admin-clean-shell > .admin-clean-content {
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: 18px 18px 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  display: block !important;
-}
-
-/* One large map fills every available pixel of the content area. */
-main.parent-home.admin-clean-shell
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card.admin-dashboard-only {
-  display: block !important;
-  position: relative !important;
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  border-radius: 16px !important;
-}
-
-/* The map itself uses all of the map surface above the BUS001 bar. */
-main.parent-home.admin-clean-shell
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card.admin-dashboard-only
-  > div:first-child {
-  width: 100% !important;
-  height: calc(100% - 76px) !important;
-  min-height: 0 !important;
-  position: relative !important;
-}
-
-/* Leaflet fills the map container exactly. */
-main.parent-home.admin-clean-shell
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card.admin-dashboard-only
-  .leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* BUS001 status stays inside the map card at the very bottom. */
-main.parent-home.admin-clean-shell
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card.admin-dashboard-only
-  > div:last-child {
-  position: absolute !important;
-  left: 12px !important;
-  right: 12px !important;
-  bottom: 12px !important;
-  width: auto !important;
-  min-height: 56px !important;
-  margin: 0 !important;
-  padding: 10px 16px !important;
-  box-sizing: border-box !important;
-}
-
-/* The removed dashboard panels must never take layout space. */
-main.parent-home.admin-clean-shell
-  .admin-reference-summary-card.admin-dashboard-only,
-main.parent-home.admin-clean-shell
-  .admin-reference-quick-access.admin-dashboard-only {
-  display: none !important;
-}
-
-/* Selected modules remain full-width and keep the same content edge. */
-main.parent-home.admin-clean-shell.admin-has-menu
-  > .admin-clean-content {
-  display: block !important;
-  padding: 18px 18px 18px !important;
-  overflow-y: auto !important;
-}
-
-main.parent-home.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .attendance-card,
-main.parent-home.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .admin-module-page {
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-}
-
-@media (max-width: 760px) {
-  html:has(.admin-clean-shell),
-  body:has(.admin-clean-shell),
-  #root:has(.admin-clean-shell) {
-    overflow: auto !important;
-  }
-
-  main.parent-home.admin-clean-shell {
-    height: auto !important;
-    min-height: 100dvh !important;
-    max-height: none !important;
-  }
-
-  main.parent-home.admin-clean-shell
-    > .admin-clean-content {
-    padding: 12px !important;
-    overflow-y: auto !important;
-  }
-
-  main.parent-home.admin-clean-shell
-    > .admin-clean-content
-    > .map-card.admin-reference-map-card.admin-dashboard-only {
-    height: calc(100dvh - 92px) !important;
-    min-height: 360px !important;
-  }
-}
-
-/* ============================================================
-   FINAL ADMIN DASHBOARD MAP SCOPE GUARD
-   The dashboard map/overview/actions are mounted only on Home.
-   ============================================================ */
-.admin-reference-dashboard.admin-has-menu .admin-dashboard-only {
-  display: none !important;
-}
-
-.admin-reference-dashboard:not(.admin-has-menu) .admin-dashboard-only {
+.figma-student-cell strong {
   display: block;
+  overflow: hidden;
+  color: var(--figma-text) !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Never let an old legacy map rule create a second visible map
-   on an Admin module page. */
-.admin-reference-dashboard.admin-has-menu .map-card.admin-reference-map-card {
-  display: none !important;
+.figma-student-cell small {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--figma-dim) !important;
+  font-size: 8px !important;
+  font-weight: 750 !important;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Routes & Stops owns its own map and is deliberately outside the
-   dashboard-only map section. */
-.admin-reference-dashboard.admin-has-menu .attendance-card .leaflet-container {
-  display: block !important;
+.figma-student-primary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
 }
 
-
-/* ============================================================
-   FINAL ADMIN MAP VISIBILITY RULE
-   Dashboard live map appears ONLY on the Admin Home page.
-   Routes & Stops keeps the map inside StopManagement.
-   ============================================================ */
-
-/* When any Admin module is selected, hide the dashboard map
-   and any other direct dashboard-only map from the content area. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .map-card {
-  display: none !important;
+.figma-student-avatar {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(34,211,238,.18);
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(34,211,238,.16), rgba(22,119,255,.08));
+  color: var(--figma-cyan) !important;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
 }
 
-/* Keep the Route & Stop manager's OWN map visible because it is
-   nested inside its module card, not a direct child of the
-   Admin content area. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .attendance-card
-  .map-card {
-  display: block !important;
+.figma-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 2px;
+  background: rgba(255,255,255,.025);
+  color: var(--figma-muted) !important;
+  font-size: 8px !important;
+  font-weight: 850 !important;
+  letter-spacing: .11em;
 }
 
-/* Never show the dashboard map on module pages, even if a legacy
-   class or previous rule tries to force it visible. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card {
-  display: none !important;
+.figma-status-chip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 
-/* Dashboard home: show the dashboard map only when no module is
-   selected. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell:not(.admin-has-menu)
-  > .admin-clean-content
-  > .map-card.admin-reference-map-card {
-  display: block !important;
+.figma-status-chip.success {
+  color: var(--figma-green) !important;
 }
 
-/* Dashboard page should not inherit module scrolling/layout. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell:not(.admin-has-menu)
-  > .admin-clean-content {
-  overflow: hidden !important;
+.figma-status-chip.warning {
+  color: var(--figma-amber) !important;
 }
 
-/* Module pages use one normal scrolling content region. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+.figma-status-chip.neutral {
+  color: var(--figma-muted) !important;
 }
 
-/* Extra protection: the Admin dashboard map cannot appear
-   behind another module due to z-index or positioning. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .admin-reference-map-card {
-  position: relative !important;
-  z-index: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+.figma-student-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-/* Route manager's inner map remains interactive. */
-main.parent-home.admin-reference-dashboard.admin-clean-shell.admin-has-menu
-  > .admin-clean-content
-  > .attendance-card
-  .leaflet-container {
-  pointer-events: auto !important;
+.figma-row-action {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--figma-muted);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.figma-row-action.primary:hover {
+  border-color: rgba(34,211,238,.30);
+  background: rgba(34,211,238,.06);
+  color: var(--figma-cyan);
+}
+
+.figma-row-action.danger:hover {
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.06);
+  color: #ff7a86;
+}
+
+.figma-student-state {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-direction: column;
+  padding: 35px;
+  text-align: center;
+}
+
+.figma-student-state strong {
+  color: var(--figma-text) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: .15em;
+}
+
+.figma-student-state p {
+  max-width: 420px;
+  margin: 0 !important;
+  color: var(--figma-dim) !important;
+  font-size: 11px !important;
+  line-height: 1.6 !important;
+}
+
+.figma-loading-dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(34,211,238,.25);
+  border-top-color: var(--figma-cyan);
+  border-radius: 50%;
+  animation: figmaStudentSpin .8s linear infinite;
+}
+
+@keyframes figmaStudentSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Keep existing Create Student / Face Registration functionality readable on dark page. */
+.figma-student-page .camera-button,
+.figma-student-page .student-delete-button {
+  border-radius: 2px !important;
+}
+
+.figma-student-page form {
+  background: #07101a !important;
+  border-color: var(--figma-border) !important;
+}
+
+.figma-student-page form input,
+.figma-student-page form textarea,
+.figma-student-page form select {
+  background: #03080e !important;
+  color: var(--figma-text) !important;
+  border-color: var(--figma-border) !important;
+}
+
+.figma-student-page .camera-container {
+  background: #02070c !important;
+  border-color: var(--figma-border) !important;
+}
+
+@media (max-width: 1050px) {
+  .figma-student-page {
+    padding: 24px 20px !important;
+  }
+
+  .figma-student-toolbar {
+    grid-template-columns: 1fr 130px;
+  }
+
+  .figma-student-results {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .figma-student-page {
+    padding: 20px 14px !important;
+  }
+
+  .figma-student-heading {
+    display: block !important;
+    padding-top: 12px;
+  }
+
+  .figma-student-heading::after {
+    position: static;
+    display: block;
+    margin-top: 16px;
+  }
+
+  .figma-student-heading h2 {
+    font-size: 38px !important;
+  }
+
+  .figma-student-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .figma-student-filter {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+  }
+
+  .figma-student-filter span {
+    font-size: 8px !important;
+  }
+
+  .figma-student-table {
+    overflow-x: auto;
+  }
+
+  .figma-student-thead,
+  .figma-student-row {
+    min-width: 980px;
+  }
 }

@@ -264,6 +264,12 @@ function App() {
   const [students, setStudents] =
     useState([]);
 
+  const [studentSearch, setStudentSearch] =
+    useState("");
+
+  const [studentFaceFilter, setStudentFaceFilter] =
+    useState("ALL");
+
   // ============================================================
   // ROUTE STATE
   // ============================================================
@@ -5260,7 +5266,7 @@ function App() {
 
     return (
 
-      <main className={`parent-home admin-reference-dashboard admin-clean-shell ${selectedMenu ? "admin-has-menu" : ""}`}>
+      <main className="parent-home admin-reference-dashboard">
 
         <header className="parent-header admin-reference-header">
 
@@ -5531,9 +5537,6 @@ function App() {
         </aside>
 
 
-        <div className="admin-clean-content">
-
-
         {selectedMenu === "stop-management" && (
 
           <section className="attendance-card">
@@ -5551,9 +5554,10 @@ function App() {
         {(selectedMenu === "student-management" ||
           selectedMenu === "students") && (
 
-          <section className="attendance-card">
+          <section className="attendance-card figma-student-page">
 
             <div
+              className="figma-student-heading"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -5565,17 +5569,16 @@ function App() {
 
               <div>
 
-                <p className="section-label">
-                  Student Management
+                <p className="section-label figma-kicker">
+                  Student Transport Network
                 </p>
 
                 <h2>
-                  Manage Students
+                  Student intelligence
                 </h2>
 
                 <p>
-                  Add students, create family accounts,
-                  and register student faces.
+                  Identity, journey assignment and live attendance status.
                 </p>
 
               </div>
@@ -5945,153 +5948,197 @@ function App() {
             )}
 
 
-            <div style={{ marginTop: "20px" }}>
+            <div className="figma-student-list-wrap">
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(250px, 1fr))",
-                  gap: "12px",
-                }}
-              >
+              <div className="figma-student-toolbar">
 
-                {studentsLoading && (
+                <div className="figma-student-search-wrap">
+                  <span className="figma-student-search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    type="search"
+                    value={studentSearch}
+                    onChange={(event) => setStudentSearch(event.target.value)}
+                    placeholder="Search students, ID or parent..."
+                    aria-label="Search students"
+                  />
+                </div>
 
-                  <p>
-                    Loading students...
-                  </p>
+                <label className="figma-student-filter">
+                  <span>FACE</span>
+                  <select
+                    value={studentFaceFilter}
+                    onChange={(event) => setStudentFaceFilter(event.target.value)}
+                    aria-label="Filter students by face registration"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="PENDING">Pending</option>
+                  </select>
+                </label>
 
-                )}
-
-
-                {!studentsLoading &&
-                  students.length === 0 && (
-
-                  <p>
-                    No students found.
-                  </p>
-
-                )}
-
-
-                {!studentsLoading &&
-                  students.map((student) => (
-
-                    <div
-                      key={student.id}
-                      style={{
-                        padding: "14px",
-                        borderRadius: "14px",
-                        border: "1px solid #e4e8ef",
-                        background: "#fff",
-                      }}
-                    >
-
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: "10px",
-                        }}
-                      >
-
-                        <div>
-
-                          <strong>
-                            {student.name}
-                          </strong>
-
-                          <p style={{ margin: "4px 0" }}>
-                            {student.student_code}
-                            {" • "}
-                            {student.class_name || "Class not assigned"}
-                          </p>
-
-                        </div>
-
-
-                        <span
-                          className={
-                            student.has_face
-                              ? "attendance-badge present"
-                              : "attendance-badge pending"
-                          }
-                        >
-                          {student.has_face
-                            ? "✓ Face"
-                            : "Face Pending"}
-                        </span>
-
-                      </div>
-
-
-                      <p style={{ margin: "8px 0 4px" }}>
-                        Father:
-                        {" "}
-                        {student.parent?.father_name ||
-                          "Not provided"}
-                      </p>
-
-
-                      <p style={{ margin: "4px 0" }}>
-                        Mother:
-                        {" "}
-                        {student.parent?.mother_name ||
-                          "Not provided"}
-                      </p>
-
-
-                      <p style={{ margin: "4px 0" }}>
-                        Parent ID:
-                        {" "}
-                        <strong>
-                          {student.parent?.username ||
-                            "Not assigned"}
-                        </strong>
-                      </p>
-
-
-                      <p style={{ margin: "4px 0", color: "#64748b" }}>
-                        Parent Password:
-                        {" "}
-                        <strong>
-                          {student.parent?.password ||
-                            "Hidden — create/reset from Admin"}
-                        </strong>
-                      </p>
-
-
-                      <div className="student-card-actions">
-
-                        <button
-                          className="camera-button"
-                          onClick={() =>
-                            openFaceRegistration(student)
-                          }
-                        >
-                          {student.has_face
-                            ? "📷 Update Face"
-                            : "📷 Register Face"}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="student-delete-button"
-                          onClick={() =>
-                            deleteStudent(student)
-                          }
-                        >
-                          🗑 Delete Student Permanently
-                        </button>
-
-                      </div>
-
-                    </div>
-
-                  ))}
+                <span className="figma-student-results">
+                  {students.length} RECORDS
+                </span>
 
               </div>
+
+              {studentsLoading && (
+                <div className="figma-student-state">
+                  <span className="figma-loading-dot" aria-hidden="true"></span>
+                  <div>
+                    <strong>SYNCING STUDENT NETWORK</strong>
+                    <p>Loading current student records...</p>
+                  </div>
+                </div>
+              )}
+
+              {!studentsLoading && students.length === 0 && (
+                <div className="figma-student-state">
+                  <strong>NO STUDENT RECORDS</strong>
+                  <p>Create your first student record to populate the transport network.</p>
+                </div>
+              )}
+
+              {!studentsLoading && students.length > 0 && (() => {
+                const query = studentSearch.trim().toLowerCase();
+                const visibleStudents = students.filter((student) => {
+                  const parent = student.parent || {};
+                  const parentText = [
+                    parent.username,
+                    parent.father_name,
+                    parent.mother_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+
+                  const haystack = [
+                    student.name,
+                    student.student_code,
+                    student.class_name,
+                    student.status,
+                    parentText,
+                    student.bus_id,
+                  ]
+                    .filter((value) => value !== null && value !== undefined)
+                    .join(" ")
+                    .toLowerCase();
+
+                  const matchesSearch = !query || haystack.includes(query);
+                  const matchesFace =
+                    studentFaceFilter === "ALL" ||
+                    (studentFaceFilter === "VERIFIED" && student.has_face) ||
+                    (studentFaceFilter === "PENDING" && !student.has_face);
+
+                  return matchesSearch && matchesFace;
+                });
+
+                if (visibleStudents.length === 0) {
+                  return (
+                    <div className="figma-student-state">
+                      <strong>NO MATCHING RECORDS</strong>
+                      <p>Adjust the search or face filter and try again.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="figma-student-table" role="table" aria-label="Student intelligence">
+                    <div className="figma-student-thead" role="row">
+                      <span role="columnheader">STUDENT</span>
+                      <span role="columnheader">ID / CLASS</span>
+                      <span role="columnheader">PARENT</span>
+                      <span role="columnheader">ASSIGNED BUS</span>
+                      <span role="columnheader">FACE</span>
+                      <span role="columnheader">STATUS</span>
+                      <span role="columnheader">ACTIONS</span>
+                    </div>
+
+                    {visibleStudents.map((student) => {
+                      const parent = student.parent || {};
+                      const parentName =
+                        parent.father_name ||
+                        parent.mother_name ||
+                        parent.username ||
+                        "Not assigned";
+                      const busLabel = student.bus_id
+                        ? student.bus?.bus_number || `BUS ${String(student.bus_id).padStart(3, "0")}`
+                        : "Unassigned";
+                      const status = String(student.status || "ACTIVE").toUpperCase();
+                      const initials = String(student.name || "ST")
+                        .trim()
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")
+                        .toUpperCase();
+
+                      return (
+                        <div className="figma-student-row" key={student.id} role="row">
+                          <div className="figma-student-cell figma-student-primary" role="cell">
+                            <span className="figma-student-avatar">{initials || "ST"}</span>
+                            <span>
+                              <strong>{student.name || "Unnamed student"}</strong>
+                              <small>{student.is_active ? "ACTIVE RECORD" : "INACTIVE RECORD"}</small>
+                            </span>
+                          </div>
+
+                          <div className="figma-student-cell" role="cell">
+                            <strong>{student.student_code || "—"}</strong>
+                            <small>{student.class_name || "CLASS NOT ASSIGNED"}</small>
+                          </div>
+
+                          <div className="figma-student-cell" role="cell">
+                            <strong>{parent.username || "Not assigned"}</strong>
+                            <small>{parentName}</small>
+                          </div>
+
+                          <div className="figma-student-cell" role="cell">
+                            <strong>{busLabel}</strong>
+                            <small>{student.bus_id ? "ASSIGNED" : "WAITING"}</small>
+                          </div>
+
+                          <div className="figma-student-cell" role="cell">
+                            <span className={`figma-status-chip ${student.has_face ? "success" : "warning"}`}>
+                              <i aria-hidden="true"></i>
+                              {student.has_face ? "VERIFIED" : "PENDING"}
+                            </span>
+                          </div>
+
+                          <div className="figma-student-cell" role="cell">
+                            <span className={`figma-status-chip ${status === "ACTIVE" ? "success" : "neutral"}`}>
+                              <i aria-hidden="true"></i>
+                              {status}
+                            </span>
+                          </div>
+
+                          <div className="figma-student-actions" role="cell">
+                            <button
+                              type="button"
+                              className="figma-row-action primary"
+                              onClick={() => openFaceRegistration(student)}
+                              title={student.has_face ? "Update face" : "Register face"}
+                              aria-label={student.has_face ? `Update face for ${student.name}` : `Register face for ${student.name}`}
+                            >
+                              {student.has_face ? "FACE" : "REGISTER"}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="figma-row-action danger"
+                              onClick={() => deleteStudent(student)}
+                              title="Delete student"
+                              aria-label={`Delete ${student.name}`}
+                            >
+                              DELETE
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
             </div>
 
@@ -6282,20 +6329,9 @@ function App() {
 
         )}
 
-        {/* ========================================================
-           ADMIN DASHBOARD-ONLY CONTENT
-           These sections are rendered ONLY when no Admin module
-           is selected. Therefore the live dashboard map cannot
-           appear on Students, Buses, Drivers, Parents, Attendance,
-           Notifications, Settings, Profile, etc.
-           Routes & Stops has its own map inside StopManagement.
-           ======================================================== */}
-        {selectedMenu === null && (
-          <>
-
         {/* SYSTEM OVERVIEW */}
 
-        <section className="bus-info-card admin-reference-summary-card admin-dashboard-only">
+        <section className="bus-info-card admin-reference-summary-card">
 
           <p className="section-label">
             System Overview
@@ -6402,7 +6438,7 @@ function App() {
 
         {/* LIVE BUS TRACKING */}
 
-        <section className="map-card admin-reference-map-card admin-dashboard-only">
+        <section className="map-card admin-reference-map-card">
 
           <div
             style={{
@@ -6532,7 +6568,7 @@ function App() {
 
         {/* ADMIN ACTIONS */}
 
-        <div className="parent-actions admin-reference-quick-access admin-dashboard-only">
+        <div className="parent-actions admin-reference-quick-access">
 
           <button
             className="action-card"
@@ -6683,12 +6719,6 @@ function App() {
           </button>
 
         </div>
-
-          </>
-        )}
-
-      </div>
-
 
       </main>
 

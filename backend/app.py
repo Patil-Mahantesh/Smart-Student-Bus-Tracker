@@ -1,7 +1,7 @@
-from flask import Flask, jsonify
+﻿from flask import Flask, jsonify
 from flask_cors import CORS
-from auth_routes import auth_bp
 
+from auth_routes import auth_bp
 from student_routes import student_bp
 from parent_routes import parent_bp
 from driver_routes import driver_bp
@@ -17,13 +17,21 @@ from location_routes import location_bp
 from core_routes import core_bp
 from stop_routes import stop_bp
 
+from database import get_connection, initialize_database
+from config import Config
+
+
 app = Flask(__name__)
 
+# Initialize and migrate the configured database.
+initialize_database()
+
+# Restrict cross-origin requests to configured frontend origins.
 CORS(
     app,
     resources={
         r"/api/*": {
-            "origins": "*"
+            "origins": Config.CORS_ORIGINS
         }
     }
 )
@@ -51,7 +59,7 @@ app.register_blueprint(auth_bp)
 
 
 # =========================================================
-# HEALTH CHECK
+# HEALTH CHECKS
 # =========================================================
 
 @app.get("/")
@@ -70,6 +78,34 @@ def health():
     })
 
 
+@app.get("/health")
+def health_compatibility():
+    # Retain the existing compatibility endpoint.
+    return health()
+
+
+@app.get("/api/db-test")
+def database_test():
+    connection = get_connection()
+
+    try:
+        table_count = connection.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM sqlite_master
+            WHERE type = 'table'
+            """
+        ).fetchone()["count"]
+
+        return jsonify({
+            "success": True,
+            "table_count": table_count
+        })
+
+    finally:
+        connection.close()
+
+
 # =========================================================
 # START SERVER
 # =========================================================
@@ -80,11 +116,12 @@ if __name__ == "__main__":
     print(" SMART STUDENT BUS TRACKER BACKEND")
     print("==============================================")
     print(" Server: http://127.0.0.1:5000")
+    print(" Debug mode: disabled")
     print("==============================================")
     print()
 
     app.run(
         host="127.0.0.1",
         port=5000,
-        debug=True
+        debug=False
     )
