@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 from auth_routes import auth_bp
@@ -18,13 +18,17 @@ from core_routes import core_bp
 from stop_routes import stop_bp
 
 from database import get_connection, initialize_database
+from production_accounts import bootstrap_production_accounts
 from config import Config
 
 
 app = Flask(__name__)
 
-# Initialize and migrate the configured database.
+# Initialize database schema before provisioning role accounts.
 initialize_database()
+
+if Config.ENV == "production":
+    bootstrap_production_accounts()
 
 # Restrict cross-origin requests to configured frontend origins.
 CORS(
