@@ -6,18 +6,26 @@ from database import get_connection
 
 
 def bootstrap_production_accounts():
-    """Create configured accounts and missing profiles without resetting passwords."""
+    """Create configured accounts and missing profiles.
+
+    Existing passwords are reset only when
+    BOOTSTRAP_RESET_EXISTING_PASSWORDS=true.
+    """
 
     accounts = [
         {
             "role": "ADMIN",
             "username": os.getenv("BOOTSTRAP_ADMIN_USERNAME", "").strip(),
             "password": os.getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
-            "name": os.getenv("BOOTSTRAP_ADMIN_NAME", "System Administrator").strip(),
+            "name": os.getenv(
+                "BOOTSTRAP_ADMIN_NAME", "System Administrator"
+            ).strip(),
             "profile_table": "admins",
             "profile_fields": ("name",),
             "profile_values": lambda: (
-                os.getenv("BOOTSTRAP_ADMIN_NAME", "System Administrator").strip(),
+                os.getenv(
+                    "BOOTSTRAP_ADMIN_NAME", "System Administrator"
+                ).strip(),
             ),
         },
         {
@@ -48,11 +56,17 @@ def bootstrap_production_accounts():
         },
     ]
 
+    # Validate every account before changing the database.
     for account in accounts:
-        if not account["username"] or not account["password"] or not account["name"]:
+        if (
+            not account["username"]
+            or not account["password"]
+            or not account["name"]
+        ):
             raise RuntimeError(
-                f"Missing username, password, or name for {account['role']} "
-                "bootstrap account. Configure the BOOTSTRAP_* environment variables."
+                f"Missing username, password, or name for "
+                f"{account['role']} bootstrap account. "
+                "Configure the BOOTSTRAP_* environment variables."
             )
 
         if len(account["password"]) < 16:
@@ -61,6 +75,13 @@ def bootstrap_production_accounts():
                 "must be at least 16 characters."
             )
 
+    reset_existing_passwords = (
+        os.getenv(
+            "BOOTSTRAP_RESET_EXISTING_PASSWORDS", ""
+        ).strip().lower()
+        == "true"
+    )
+
     connection = get_connection()
 
     try:
@@ -68,7 +89,11 @@ def bootstrap_production_accounts():
 
         for account in accounts:
             user = connection.execute(
-                "SELECT id, role FROM users WHERE username = ?",
+                """
+                SELECT id, role
+                FROM users
+                WHERE username = ?
+                """,
                 (account["username"],),
             ).fetchone()
 
@@ -76,9 +101,25 @@ def bootstrap_production_accounts():
                 if user["role"] != account["role"]:
                     raise RuntimeError(
                         f"Username '{account['username']}' already exists "
-                        "with a different role. Choose another configured username."
+                        "with a different role. Choose another configured "
+                        "username."
                     )
+
                 user_id = user["id"]
+
+                # Reset only when explicitly enabled in the environment.
+                if reset_existing_passwords:
+                    connection.execute(
+                        """
+                        UPDATE users
+                        SET password_hash = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            generate_password_hash(account["password"]),
+                            user_id,
+                        ),
+                    )
             else:
                 cursor = connection.execute(
                     """
@@ -94,19 +135,25 @@ def bootstrap_production_accounts():
                 user_id = cursor.lastrowid
 
             profile = connection.execute(
-                f"SELECT id FROM {account['profile_table']} WHERE user_id = ?",
+                f"""
+                SELECT id
+                FROM {account['profile_table']}
+                WHERE user_id = ?
+                """,
                 (user_id,),
             ).fetchone()
 
             if not profile:
                 fields = ("user_id",) + account["profile_fields"]
-                placeholders = ", ".join("?" for _ in fields)
                 columns = ", ".join(fields)
+                placeholders = ", ".join("?" for _ in fields)
                 values = (user_id,) + account["profile_values"]()
 
                 connection.execute(
-                    f"INSERT INTO {account['profile_table']} ({columns}) "
-                    f"VALUES ({placeholders})",
+                    f"""
+                    INSERT INTO {account['profile_table']} ({columns})
+                    VALUES ({placeholders})
+                    """,
                     values,
                 )
 
@@ -115,5 +162,6 @@ def bootstrap_production_accounts():
     except Exception:
         connection.rollback()
         raise
+
     finally:
         connection.close()
