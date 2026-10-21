@@ -1,4 +1,4 @@
-/*
+﻿/*
   StopManagement.jsx
 
   Map-based Stop Management for Admin.
@@ -201,7 +201,7 @@ export default function StopManagement({
 
       const response =
         await fetch(
-          "http://localhost:5000/api/stops",
+          "https://smart-student-bus-tracker-backend.onrender.com/api/stops",
           {
             headers: {
               Authorization:
@@ -384,8 +384,8 @@ export default function StopManagement({
 
       const url =
         editingStopId
-          ? `http://localhost:5000/api/stops/${editingStopId}`
-          : "http://localhost:5000/api/stops";
+          ? `https://smart-student-bus-tracker-backend.onrender.com/api/stops/${editingStopId}`
+          : "https://smart-student-bus-tracker-backend.onrender.com/api/stops";
 
       const response =
         await fetch(
@@ -486,7 +486,7 @@ export default function StopManagement({
 
       const response =
         await fetch(
-          `http://localhost:5000/api/stops/${stop.id}`,
+          `https://smart-student-bus-tracker-backend.onrender.com/api/stops/${stop.id}`,
           {
             method: "DELETE",
 
@@ -752,8 +752,8 @@ export default function StopManagement({
               }}
             >
               {type === "PICKUP"
-                ? "🟢 Pickup"
-                : "🔴 Drop"}
+                ? "ðŸŸ¢ Pickup"
+                : "ðŸ”´ Drop"}
             </button>
 
           ))}
@@ -841,7 +841,7 @@ export default function StopManagement({
                 fontWeight: 800,
               }}
             >
-              📍{" "}
+              ðŸ“{" "}
               {location.latitude.toFixed(6)}
               {" , "}
               {location.longitude.toFixed(6)}
@@ -879,7 +879,7 @@ export default function StopManagement({
               fontWeight: 750,
             }}
           >
-            ✓ {message}
+            âœ“ {message}
           </div>
 
         )}
@@ -967,7 +967,7 @@ export default function StopManagement({
               ? "Saving..."
               : editingStopId
                 ? "Save Changes"
-                : "📍 Save Stop"}
+                : "ðŸ“ Save Stop"}
           </button>
 
         </div>
@@ -1059,8 +1059,8 @@ export default function StopManagement({
                     >
                       {stop.stop_type ===
                       "PICKUP"
-                        ? "🟢"
-                        : "🔴"}
+                        ? "ðŸŸ¢"
+                        : "ðŸ”´"}
                     </div>
 
                     <div
@@ -1091,7 +1091,7 @@ export default function StopManagement({
                         }}
                       >
                         {stop.stop_type}
-                        {" • "}
+                        {" â€¢ "}
                         {Number(
                           stop.latitude
                         ).toFixed(5)}
@@ -1268,7 +1268,7 @@ export default function StopManagement({
               fontWeight: 850,
             }}
           >
-            📍 Click the map to select a stop
+            ðŸ“ Click the map to select a stop
           </strong>
 
           <span
@@ -1291,3 +1291,4 @@ export default function StopManagement({
     </div>
   );
 }
+
