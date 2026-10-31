@@ -1,4 +1,4 @@
-﻿/*
+﻿﻿/*
   StopManagement.jsx
 
   Map-based Stop Management for Admin.
@@ -752,8 +752,8 @@ export default function StopManagement({
               }}
             >
               {type === "PICKUP"
-                ? "ðŸŸ¢ Pickup"
-                : "ðŸ”´ Drop"}
+                ? "🟢 Pickup"
+                : "🔴 Drop"}
             </button>
 
           ))}
@@ -841,7 +841,7 @@ export default function StopManagement({
                 fontWeight: 800,
               }}
             >
-              ðŸ“{" "}
+              📍{" "}
               {location.latitude.toFixed(6)}
               {" , "}
               {location.longitude.toFixed(6)}
@@ -879,7 +879,7 @@ export default function StopManagement({
               fontWeight: 750,
             }}
           >
-            âœ“ {message}
+            ✓ {message}
           </div>
 
         )}
@@ -967,7 +967,7 @@ export default function StopManagement({
               ? "Saving..."
               : editingStopId
                 ? "Save Changes"
-                : "ðŸ“ Save Stop"}
+                : "📍 Save Stop"}
           </button>
 
         </div>
@@ -1059,8 +1059,8 @@ export default function StopManagement({
                     >
                       {stop.stop_type ===
                       "PICKUP"
-                        ? "ðŸŸ¢"
-                        : "ðŸ”´"}
+                        ? "🟢"
+                        : "🔴"}
                     </div>
 
                     <div
@@ -1091,7 +1091,7 @@ export default function StopManagement({
                         }}
                       >
                         {stop.stop_type}
-                        {" â€¢ "}
+                        {" • "}
                         {Number(
                           stop.latitude
                         ).toFixed(5)}
@@ -1268,7 +1268,7 @@ export default function StopManagement({
               fontWeight: 850,
             }}
           >
-            ðŸ“ Click the map to select a stop
+            📍 Click the map to select a stop
           </strong>
 
           <span
@@ -1291,4 +1291,3 @@ export default function StopManagement({
     </div>
   );
 }
-

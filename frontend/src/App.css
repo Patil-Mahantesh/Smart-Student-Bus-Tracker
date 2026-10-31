@@ -8862,3 +8862,1560 @@ body:has(.admin-reference-dashboard),
     min-width: 980px;
   }
 }
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color: #f8fafc;
+  background: #030508;
+  color-scheme: dark;
+
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100svh;
+  background: #030508;
+  color: #f8fafc;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-body);
+  line-height: 1.25;
+  font-weight: var(--font-semibold);
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(22, 119, 255, 0.35);
+  color: #fff;
+}
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100svh;
+  background: #030508;
+  color: #f8fafc;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   SCREENSHOT FIXES — ADMIN DASHBOARD + STUDENT FORM
+   1. Remove the Quick Access block marked for removal.
+   2. Let the desktop map use the freed space.
+   3. Restore a readable light form surface inside Student Management.
+   ============================================================ */
+
+.admin-reference-dashboard > .admin-reference-quick-access {
+  display: none !important;
+}
+
+@media (min-width: 761px) {
+  .admin-reference-dashboard > .admin-reference-map-card {
+    right: 24px !important;
+  }
+}
+
+.figma-student-page form {
+  background: #f8fafc !important;
+  border: 1px solid #dbe4ef !important;
+  color: #0f172a !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .06) !important;
+}
+
+.figma-student-page form h3 {
+  color: #0f172a !important;
+  font-size: 20px !important;
+  font-weight: 750 !important;
+  margin: 0 0 8px !important;
+}
+
+.figma-student-page form p {
+  color: #475569 !important;
+  line-height: 1.6 !important;
+}
+
+.figma-student-page form label {
+  color: #334155 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.figma-student-page form input,
+.figma-student-page form textarea,
+.figma-student-page form select {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  padding: 10px 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font: inherit !important;
+  box-shadow: none !important;
+}
+
+.figma-student-page form input::placeholder,
+.figma-student-page form textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.figma-student-page form input:focus,
+.figma-student-page form textarea:focus,
+.figma-student-page form select:focus {
+  outline: 3px solid rgba(37, 99, 235, .14) !important;
+  border-color: #2563eb !important;
+}
+
+.figma-student-page form .camera-button {
+  width: auto !important;
+  max-width: none !important;
+  min-height: 42px !important;
+  flex: 1 1 180px !important;
+  margin: 0 !important;
+  padding: 11px 16px !important;
+  border: 1px solid #2563eb !important;
+  border-radius: 9px !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.figma-student-page form .camera-button[type="button"] {
+  border-color: #cbd5e1 !important;
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.figma-student-page form .camera-button:disabled {
+  opacity: .65 !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================================
+   ADMIN MAP WIDTH FIX — higher specificity than legacy map rules
+   Keep the System Overview card floating in the upper-left, remove
+   Quick Access, and extend the map across the full remaining area.
+   ============================================================ */
+@media (min-width: 761px) {
+  .admin-reference-dashboard .map-card.admin-reference-map-card {
+    position: absolute !important;
+    left: 260px !important;
+    right: 24px !important;
+    top: 92px !important;
+    bottom: 68px !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .admin-reference-dashboard .admin-reference-quick-access {
+    display: none !important;
+  }
+}
+
+
+/* ============================================================
+   COMPLETE ADMIN WORKSPACE — FINAL OVERRIDES
+   Stable desktop shell, full-width dashboard map, consistent light
+   module surfaces, and readable Student Management controls.
+   ============================================================ */
+
+@media (min-width: 761px) {
+  html:has(main.parent-home.admin-reference-dashboard),
+  body:has(main.parent-home.admin-reference-dashboard),
+  #root:has(main.parent-home.admin-reference-dashboard) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  main.parent-home.admin-reference-dashboard {
+    position: relative !important;
+    display: block !important;
+    width: 100vw !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    background: #f4f7fb !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-sidebar {
+    position: absolute !important;
+    inset: 0 auto 0 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 236px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 24px 14px 18px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+    z-index: 300 !important;
+    background: #fff !important;
+    border-right: 1px solid #e7ebf2 !important;
+    box-shadow: none !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-header {
+    position: absolute !important;
+    top: 0 !important;
+    left: 236px !important;
+    right: 0 !important;
+    width: auto !important;
+    height: 76px !important;
+    min-height: 76px !important;
+    margin: 0 !important;
+    padding: 0 26px !important;
+    box-sizing: border-box !important;
+    z-index: 250 !important;
+    background: rgba(255,255,255,.98) !important;
+    border: 0 !important;
+    border-bottom: 1px solid #e7edf4 !important;
+    border-radius: 0 !important;
+    box-shadow: 0 2px 14px rgba(15,23,42,.035) !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card {
+    position: absolute !important;
+    top: 94px !important;
+    left: 260px !important;
+    right: auto !important;
+    width: 340px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 18px !important;
+    box-sizing: border-box !important;
+    z-index: 35 !important;
+    border: 1px solid #e3e9f1 !important;
+    border-radius: 18px !important;
+    background: rgba(255,255,255,.98) !important;
+    box-shadow: 0 8px 28px rgba(15,23,42,.08) !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card .bus-info-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card .bus-info-item {
+    min-width: 0 !important;
+    min-height: 64px !important;
+    padding: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    box-sizing: border-box !important;
+    border: 1px solid #e6ebf2 !important;
+    border-radius: 12px !important;
+    background: #f8fafc !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card .bus-info-icon {
+    display: grid !important;
+    place-items: center !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    border-radius: 10px !important;
+    background: #edf4ff !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-map-card {
+    position: absolute !important;
+    top: 92px !important;
+    left: 260px !important;
+    right: 24px !important;
+    bottom: 24px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    z-index: 5 !important;
+    border: 1px solid #e0e7ef !important;
+    border-radius: 18px !important;
+    background: #e9eef5 !important;
+    box-shadow: 0 8px 25px rgba(15,23,42,.055) !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-map-card > div:first-child {
+    position: relative !important;
+    width: 100% !important;
+    height: calc(100% - 76px) !important;
+    min-height: 0 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-map-card .leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-map-card > div:last-child {
+    position: absolute !important;
+    z-index: 20 !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    min-height: 54px !important;
+    margin: 0 !important;
+    padding: 10px 14px !important;
+    box-sizing: border-box !important;
+    border: 1px solid #e0e7ef !important;
+    border-radius: 13px !important;
+    background: rgba(255,255,255,.97) !important;
+    box-shadow: 0 8px 22px rgba(15,23,42,.10) !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .admin-reference-quick-access {
+    display: none !important;
+  }
+
+  /* A selected Admin page replaces the dashboard map and summary. */
+  main.parent-home.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-summary-card,
+  main.parent-home.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-map-card,
+  main.parent-home.admin-reference-dashboard:has(> .attendance-card) > .admin-reference-quick-access,
+  main.parent-home.admin-reference-dashboard:has(> .admin-module-page) > .admin-reference-summary-card,
+  main.parent-home.admin-reference-dashboard:has(> .admin-module-page) > .admin-reference-map-card,
+  main.parent-home.admin-reference-dashboard:has(> .admin-module-page) > .admin-reference-quick-access {
+    display: none !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .attendance-card,
+  main.parent-home.admin-reference-dashboard > .admin-module-page {
+    position: absolute !important;
+    top: 92px !important;
+    left: 260px !important;
+    right: 24px !important;
+    bottom: 24px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 25px !important;
+    box-sizing: border-box !important;
+    overflow: auto !important;
+    z-index: 100 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    color: #172235 !important;
+    box-shadow: 0 8px 28px rgba(15,23,42,.055) !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page {
+    padding: 26px !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-heading h2 {
+    color: #172235 !important;
+    font-size: clamp(28px, 3vw, 44px) !important;
+    line-height: 1.12 !important;
+    letter-spacing: -.035em !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-heading p {
+    color: #7d8aa0 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .camera-button {
+    background: #2563eb !important;
+    color: #fff !important;
+    border: 1px solid #2563eb !important;
+    border-radius: 10px !important;
+    min-height: 44px !important;
+    padding: 0 18px !important;
+    font-weight: 750 !important;
+    box-shadow: none !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .camera-button:hover {
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form {
+    background: #f8fafc !important;
+    color: #273449 !important;
+    border: 1px solid #e0e7ef !important;
+    box-shadow: none !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form h3,
+  main.parent-home.admin-reference-dashboard > .figma-student-page form label {
+    color: #273449 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form p {
+    color: #64748b !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form input,
+  main.parent-home.admin-reference-dashboard > .figma-student-page form select,
+  main.parent-home.admin-reference-dashboard > .figma-student-page form textarea {
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 10px 12px !important;
+    box-sizing: border-box !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 9px !important;
+    background: #fff !important;
+    color: #172235 !important;
+    outline-color: #2563eb !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form input::placeholder {
+    color: #8a96a8 !important;
+    opacity: 1 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page form button[type="button"] {
+    background: #eef2f7 !important;
+    color: #334155 !important;
+    border-color: #d5dde8 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-list-wrap {
+    margin-top: 20px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-search-wrap {
+    flex: 1 1 280px !important;
+    min-width: 160px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 0 12px !important;
+    border: 1px solid #d9e1ec !important;
+    border-radius: 9px !important;
+    background: #fff !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-search-wrap input {
+    min-height: 42px !important;
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    color: #172235 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-filter select {
+    min-height: 42px !important;
+    border-radius: 8px !important;
+    border: 1px solid #d4dce7 !important;
+    background: #fff !important;
+    color: #273449 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-results {
+    color: #64748b !important;
+    font-weight: 800 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-thead {
+    background: #f8fafc !important;
+    color: #64748b !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-row {
+    background: #fff !important;
+    border-color: #e8edf4 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-cell strong {
+    color: #263449 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-cell small {
+    color: #8390a4 !important;
+  }
+
+  main.parent-home.admin-reference-dashboard > .figma-student-page .figma-student-state {
+    background: #fff !important;
+    color: #536278 !important;
+  }
+}
+
+/* Complete Admin module pages */
+.admin-module-page {
+  color: #172235 !important;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.admin-module-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 0 0 22px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.admin-module-heading-copy {
+  min-width: 0;
+}
+
+.admin-module-eyebrow {
+  margin: 0 0 9px !important;
+  color: #738198 !important;
+  font-size: 10px !important;
+  line-height: 1.3 !important;
+  font-weight: 850 !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+}
+
+.admin-module-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: #172235 !important;
+  font-size: clamp(26px, 2.4vw, 36px) !important;
+  line-height: 1.15 !important;
+  font-weight: 850 !important;
+  letter-spacing: -.035em !important;
+}
+
+.admin-module-title-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 13px;
+  background: #edf4ff;
+  font-size: 21px;
+}
+
+.admin-module-heading-copy > p:last-child {
+  margin: 10px 0 0 !important;
+  color: #7b879a !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.admin-module-header-actions,
+.adm-form-actions,
+.adm-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.adm-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+
+.adm-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.adm-button-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.adm-button-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.adm-button-secondary {
+  background: #fff;
+  border-color: #d9e1ec;
+  color: #334155;
+}
+
+.adm-button-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #bfcbdc;
+}
+
+.adm-button-small {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #edf4ff;
+  border-color: #d3e3ff;
+  color: #1d4ed8;
+  font-size: 11px;
+}
+
+.adm-card {
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 20px;
+  border: 1px solid #e3e9f1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15,23,42,.035);
+}
+
+.adm-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+}
+
+.adm-card-heading h3 {
+  margin: 0;
+  color: #202e43;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.adm-card-heading p {
+  margin: 6px 0 0;
+  color: #7b879a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.adm-search-input,
+.adm-form-grid input,
+.adm-form-grid select,
+.adm-form-grid textarea,
+.adm-inline-assign select,
+.adm-map-bus-select select,
+.adm-filter-row input {
+  width: auto;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  border: 1px solid #d4dce7;
+  border-radius: 9px;
+  background: #fff;
+  color: #172235;
+  font: inherit;
+  font-size: 12px;
+  outline-color: #2563eb;
+}
+
+.adm-search-input {
+  width: min(280px, 100%);
+}
+
+.adm-search-input::placeholder,
+.adm-form-grid input::placeholder,
+.adm-form-grid textarea::placeholder {
+  color: #8b96a8;
+  opacity: 1;
+}
+
+.adm-form-card {
+  background: #fbfcfe;
+}
+
+.adm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.adm-form-grid-one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.adm-form-grid label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #344258;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.adm-form-grid label input,
+.adm-form-grid label select,
+.adm-form-grid label textarea {
+  width: 100%;
+  min-height: 44px;
+  background: #fff;
+  color: #172235;
+}
+
+.adm-form-grid textarea {
+  resize: vertical;
+}
+
+.adm-form-actions {
+  margin-top: 18px;
+}
+
+.adm-inline-assign {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 180px;
+}
+
+.adm-inline-assign select {
+  max-width: 220px;
+  flex: 1;
+  padding: 8px;
+}
+
+.adm-metric-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.adm-metric-row-compact {
+  margin: 0 0 18px;
+}
+
+.adm-metric-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e3eaf3;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.adm-metric-card > span {
+  display: block;
+  color: #758198;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.adm-metric-card strong {
+  display: block;
+  margin-top: 9px;
+  color: #172235;
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.adm-metric-card small {
+  display: block;
+  margin-top: 7px;
+  color: #8591a4;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.adm-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e7edf4;
+  border-radius: 11px;
+}
+
+.adm-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  color: #334155;
+  text-align: left;
+}
+
+.adm-table th {
+  padding: 12px 13px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e4eaf2;
+  color: #78859a;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .07em;
+  white-space: nowrap;
+}
+
+.adm-table td {
+  padding: 13px;
+  border-bottom: 1px solid #eef2f6;
+  color: #4b586c;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.adm-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-table tbody tr:hover td {
+  background: #fbfdff;
+}
+
+.adm-table td strong {
+  display: block;
+  color: #263449;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.adm-subcell {
+  display: block;
+  margin-top: 4px;
+  color: #8b97a8;
+  font-size: 10px;
+}
+
+.adm-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.adm-status-success {
+  background: #eaf8ef;
+  color: #1c7b42;
+}
+
+.adm-status-neutral {
+  background: #eef2f7;
+  color: #64748b;
+}
+
+.adm-status-danger {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.adm-empty-state {
+  min-height: 180px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed #d9e2ed;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.adm-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: #edf4ff;
+  color: #2563eb;
+  font-size: 25px;
+}
+
+.adm-empty-state strong {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.adm-empty-state p {
+  max-width: 420px;
+  margin: 7px 0 0;
+  color: #8692a4;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.adm-notice {
+  margin: 0 0 15px;
+  padding: 12px 14px;
+  border: 1px solid #d7e2ef;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.adm-notice-success {
+  background: #eefaf2;
+  border-color: #ccebd5;
+  color: #176337;
+}
+
+.adm-notice-error {
+  background: #fff3f2;
+  border-color: #f5d1cd;
+  color: #a22b22;
+}
+
+.adm-notice-info {
+  background: #f2f7ff;
+}
+
+.adm-loading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 14px;
+  color: #718096;
+  font-size: 12px;
+}
+
+.adm-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #dbe7fa;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: adm-spin .8s linear infinite;
+}
+
+@keyframes adm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.adm-map-card {
+  overflow: hidden;
+}
+
+.adm-map-canvas {
+  position: relative;
+  width: 100%;
+  height: min(60vh, 580px);
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid #dfe7f0;
+  border-radius: 12px;
+  background: #e8eef5;
+}
+
+.adm-map-canvas .leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+.adm-map-overlay {
+  position: absolute;
+  inset: auto 18px 18px 18px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 5px 18px rgba(15,23,42,.08);
+}
+
+.adm-map-overlay strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.adm-map-overlay span {
+  color: #718096;
+  font-size: 11px;
+}
+
+.adm-map-bus-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7b879a;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.adm-map-bus-select select {
+  min-width: 140px;
+}
+
+.adm-filter-row label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #7b879a;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+
+.adm-notification-list,
+.adm-announcement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid #e6ecf3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.adm-notification-dot,
+.adm-announcement-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 11px;
+  background: #edf4ff;
+  font-size: 18px;
+}
+
+.adm-notification-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-notification-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.adm-notification-title-row strong {
+  color: #263449;
+  font-size: 13px;
+}
+
+.adm-notification-title-row small,
+.adm-notification-copy > small {
+  color: #8a96a8;
+  font-size: 10px;
+}
+
+.adm-notification-copy p {
+  margin: 7px 0;
+  color: #57657a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.adm-announcement-item {
+  display: flex;
+  gap: 14px;
+  padding: 17px;
+  border: 1px solid #e6ecf3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.adm-announcement-item > div:last-child {
+  min-width: 0;
+}
+
+.adm-announcement-item h3 {
+  margin: 0;
+  color: #263449;
+  font-size: 14px;
+}
+
+.adm-announcement-item p:last-child {
+  margin: 7px 0 0;
+  color: #66758b;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.adm-settings-grid,
+.adm-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.adm-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 0;
+  border-bottom: 1px solid #edf1f5;
+  cursor: pointer;
+}
+
+.adm-setting-row:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-setting-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.adm-setting-row strong {
+  color: #334155;
+  font-size: 12px;
+}
+
+.adm-setting-row small {
+  color: #8290a4;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.adm-setting-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  flex: 0 0 auto;
+}
+
+.adm-info-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.adm-info-row:last-child {
+  border-bottom: 0;
+}
+
+.adm-info-row > span {
+  color: #7c899d;
+  font-size: 11px;
+}
+
+.adm-info-row > strong {
+  max-width: 65%;
+  text-align: right;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.adm-break-word {
+  overflow-wrap: anywhere;
+}
+
+.adm-profile-card {
+  padding: 26px;
+  text-align: center;
+  border: 1px solid #e3e9f1;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #f5f9ff 0%, #fff 76%);
+}
+
+.adm-profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 17px;
+  border: 4px solid #fff;
+  border-radius: 24px;
+  background: #e7f0ff;
+  box-shadow: 0 6px 20px rgba(37,99,235,.13);
+  color: #2563eb;
+  font-size: 31px;
+  font-weight: 850;
+}
+
+.adm-profile-card h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 21px;
+}
+
+.adm-profile-card > p:not(.adm-module-eyebrow) {
+  margin: 7px 0 13px;
+  color: #7b879a;
+  font-size: 12px;
+}
+
+/* Tablet adaptation */
+@media (min-width: 761px) and (max-width: 1050px) {
+  main.parent-home.admin-reference-dashboard > .admin-sidebar {
+    width: 208px !important;
+  }
+  main.parent-home.admin-reference-dashboard > .admin-reference-header {
+    left: 208px !important;
+  }
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card,
+  main.parent-home.admin-reference-dashboard > .admin-reference-map-card,
+  main.parent-home.admin-reference-dashboard > .attendance-card,
+  main.parent-home.admin-reference-dashboard > .admin-module-page {
+    left: 228px !important;
+    right: 18px !important;
+  }
+  main.parent-home.admin-reference-dashboard > .admin-reference-summary-card {
+    width: min(310px, calc(100% - 252px)) !important;
+  }
+  .admin-module-header {
+    flex-wrap: wrap;
+  }
+}
+
+/* Mobile adaptation keeps the existing collapsible/mobile navigation behavior. */
+@media (max-width: 760px) {
+  main.parent-home.admin-reference-dashboard > .admin-module-page {
+    position: relative !important;
+    inset: auto !important;
+    width: calc(100% - 20px) !important;
+    max-width: none !important;
+    min-height: calc(100dvh - 170px) !important;
+    height: auto !important;
+    margin: 12px 10px 90px !important;
+    padding: 16px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  .admin-module-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .admin-module-header-actions {
+    width: 100%;
+  }
+
+  .admin-module-header-actions .adm-button {
+    flex: 1;
+  }
+
+  .adm-card {
+    padding: 14px;
+  }
+
+  .adm-card-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adm-search-input {
+    width: 100%;
+  }
+
+  .adm-form-grid,
+  .adm-settings-grid,
+  .adm-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-metric-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .adm-filter-row label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .adm-inline-assign {
+    min-width: 220px;
+  }
+
+  .adm-notification-title-row {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .adm-info-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .adm-info-row > strong {
+    max-width: 100%;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-spinner {
+    animation: none;
+  }
+  .adm-button {
+    transition: none;
+  }
+}
+
+
+/* Settings that are intentionally browser-local and scoped to the open Admin page. */
+.adm-compact-tables .adm-table td {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+.adm-reduced-motion *,
+.adm-reduced-motion *::before,
+.adm-reduced-motion *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: .001ms !important;
+}
+
+
+/* Final desktop safety net: fill the viewport to the right of the Admin sidebar. */
+@media (min-width: 761px) {
+  html:has(body main.parent-home.admin-reference-dashboard),
+  body:has(main.parent-home.admin-reference-dashboard),
+  #root:has(main.parent-home.admin-reference-dashboard) {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body:has(main.parent-home.admin-reference-dashboard) main.parent-home.admin-reference-dashboard {
+    width: 100vw !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    box-sizing: border-box !important;
+  }
+  body:has(main.parent-home.admin-reference-dashboard) main.parent-home.admin-reference-dashboard > .admin-reference-map-card {
+    position: absolute !important;
+    left: 260px !important;
+    right: 24px !important;
+    top: 92px !important;
+    bottom: 24px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+  body:has(main.parent-home.admin-reference-dashboard) main.parent-home.admin-reference-dashboard > .admin-reference-quick-access {
+    display: none !important;
+  }
+}
+/* Hide scrollbar while keeping scrolling enabled */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+/* ============================================================
+   ADMIN SCROLL FIX — HIDE SCROLLBARS, KEEP SCROLLING ENABLED
+   ============================================================ */
+
+/* Admin app uses viewport height without outer scrolling */
+html:has(.admin-clean-shell),
+body:has(.admin-clean-shell),
+#root:has(.admin-clean-shell) {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+/* Keep the Admin layout constrained to the viewport */
+.admin-clean-shell {
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Sidebar: scroll independently when menu items exceed screen height */
+.admin-clean-shell > .admin-sidebar {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Main content: the only vertical scroll area */
+.admin-clean-shell > .admin-clean-content {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  align-content: start !important;
+}
+
+/* Hide scrollbar visuals, not scrolling */
+.admin-clean-shell > .admin-sidebar,
+.admin-clean-shell > .admin-clean-content {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.admin-clean-shell > .admin-sidebar::-webkit-scrollbar,
+.admin-clean-shell > .admin-clean-content::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Ensure all content remains within the available width */
+.admin-clean-shell > .admin-clean-content > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}

@@ -11,6 +11,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 import StopManagement from "./StopManagement";
+import AdminWorkspace from "./AdminWorkspace";
 
 import {
   parentMenu,
@@ -171,6 +172,21 @@ function App() {
   const [travelStatusLoading, setTravelStatusLoading] =
     useState(false);
 
+  // Parent-specific child selection. These IDs come from the
+  // children linked to the currently logged-in parent account.
+  const [parentChildren, setParentChildren] = useState([]);
+
+  const [selectedParentChildId, setSelectedParentChildId] =
+    useState(null);
+
+  const [parentChildrenLoading, setParentChildrenLoading] =
+    useState(false);
+
+  const selectedParentChild =
+    parentChildren.find(
+      (child) => String(child.id) === String(selectedParentChildId)
+    ) || parentChildren[0] || null;
+
 
   // ============================================================
   // PARENT CALENDAR STATE
@@ -276,6 +292,16 @@ function App() {
 
   const [routes, setRoutes] =
     useState([]);
+
+  const [adminOverview, setAdminOverview] = useState({
+    students: 0,
+    buses: 0,
+    drivers: 0,
+    parents: 0,
+    routes: 0,
+    stops: 0,
+    active_trips: 0,
+  });
 
   const [routesLoading, setRoutesLoading] =
     useState(false);
@@ -400,45 +426,36 @@ function App() {
   // ============================================================
 
   const apiFetch = async (url, options = {}) => {
+    const apiUrl = url.startsWith("http")
+      ? url.replace(
+          /^https?:\/\/[^/]+/,
+         API_BASE_URL
+        )
+      : `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 
-    const response = await fetch(url, options);
+    const response = await fetch(apiUrl, options);
 
     if (response.status === 401) {
-
-      try {
-
+     try {
         const errorData = await response.clone().json();
+        const message = String(errorData.message || "").toLowerCase();
 
-        const message =
-          String(errorData.message || "").toLowerCase();
-
-        const isExpired =
+       const isExpired =
           message.includes("expired") ||
           message.includes("token") ||
           message.includes("unauthorized");
 
-        if (isExpired) {
-          handleSessionExpired();
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Unable to read authentication error:",
-          error
-        );
-
+       if (isExpired) {
+         handleSessionExpired();
+       }
+     } catch (error) {
+        console.error("Unable to read authentication error:", error);
         handleSessionExpired();
-
-      }
-
+     }
     }
 
     return response;
-
   };
-
-
   // ============================================================
   // SPLASH SCREEN TIMER
   // ============================================================
@@ -645,37 +662,103 @@ function App() {
 
 
   // ============================================================
-  // LOAD ATTENDANCE WHEN PARENT OPENS DASHBOARD
+  // LOAD THE CHILDREN LINKED TO THE LOGGED-IN PARENT
+  // ============================================================
+
+  const loadParentChildren = async () => {
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return;
+    }
+
+    setParentChildrenLoading(true);
+
+    try {
+
+      const response = await apiFetch(
+        "https://smart-student-bus-tracker-backend.onrender.com/api/parents/children",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          data.message || "Unable to load children for this parent"
+        );
+        setParentChildren([]);
+        setSelectedParentChildId(null);
+        return;
+      }
+
+      const children = Array.isArray(data.children)
+        ? data.children
+        : [];
+
+      setParentChildren(children);
+      setSelectedParentChildId((currentId) => {
+        const currentStillLinked = children.some(
+          (child) => String(child.id) === String(currentId)
+        );
+
+        return currentStillLinked
+          ? currentId
+          : (children[0]?.id ?? null);
+      });
+
+    } catch (error) {
+
+      console.error("Parent children loading error:", error);
+      setParentChildren([]);
+      setSelectedParentChildId(null);
+
+    } finally {
+
+      setParentChildrenLoading(false);
+
+    }
+
+  };
+
+
+  // ============================================================
+  // LOAD ATTENDANCE WHEN PARENT OR SELECTED CHILD CHANGES
   // ============================================================
 
   useEffect(() => {
 
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
+    if (selectedRole !== "PARENT_HOME") {
       return;
     }
 
-    loadAttendanceHistory();
+    if (!selectedParentChild?.id) {
+      setAttendanceHistory([]);
+      return;
+    }
 
-  }, [selectedRole]);
+    loadAttendanceHistory(selectedParentChild.id);
+
+  }, [selectedRole, selectedParentChild?.id]);
 
 
   // ============================================================
-  // LOAD NOTIFICATIONS WHEN PARENT LOGS IN
+  // LOAD PARENT DATA WHEN PARENT LOGS IN
   // ============================================================
 
   useEffect(() => {
 
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
-
+    if (selectedRole !== "PARENT_HOME") {
       return;
-
     }
 
-
+    loadParentChildren();
     loadParentNotifications();
 
   }, [selectedRole]);
@@ -689,24 +772,32 @@ function App() {
 
     if (
       selectedRole !== "PARENT_HOME" ||
-      selectedMenu !== "calendar"
+      selectedMenu !== "calendar" ||
+      !selectedParentChild?.id
     ) {
       return;
     }
 
-    loadAttendanceHistory();
+    loadAttendanceHistory(selectedParentChild.id);
 
-  }, [selectedRole, selectedMenu]);
+  }, [selectedRole, selectedMenu, selectedParentChild?.id]);
 
 
   // ============================================================
   // LOAD STUDENT ATTENDANCE HISTORY
   // ============================================================
 
-  const loadAttendanceHistory = async () => {
+  const loadAttendanceHistory = async (
+    studentId = selectedParentChild?.id
+  ) => {
 
     const token =
       localStorage.getItem("token");
+
+    if (!studentId) {
+      setAttendanceHistory([]);
+      return;
+    }
 
     if (!token) {
       return;
@@ -718,7 +809,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/attendance/student/1",
+          `https://smart-student-bus-tracker-backend.onrender.com/api/attendance/student/${studentId}`,
           {
             method: "GET",
             headers: {
@@ -949,7 +1040,7 @@ function App() {
         );
 
         setBusLocationStatus(
-          "LIVE â€¢ Bus location updating"
+          "LIVE • Bus location updating"
         );
 
       } else {
@@ -1725,7 +1816,7 @@ function App() {
 
 
       setRegistrationStatus(
-        `âœ“ Face registered successfully for ${data.student.name}`
+        `✓ Face registered successfully for ${data.student.name}`
       );
 
 
@@ -1835,7 +1926,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/routes",
+          "https://smart-student-bus-tracker-backend.onrender.com/api/admin/routes",
           {
             method: "GET",
 
@@ -2237,6 +2328,52 @@ function App() {
 
     }
 
+    if (selectedMenu === null) {
+      loadStudents();
+      loadRoutes();
+    }
+
+  }, [selectedRole, selectedMenu]);
+
+
+  // Load real Admin counters rather than displaying fixed sample numbers.
+  useEffect(() => {
+    if (selectedRole !== "ADMIN_HOME") {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdminOverview = async () => {
+      try {
+        const response = await apiFetch(
+          "https://smart-student-bus-tracker-backend.onrender.com/api/admin/overview",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && !cancelled) {
+          setAdminOverview(data.counts || {});
+        }
+      } catch (error) {
+        console.error("Admin overview loading error:", error);
+      }
+    };
+
+    loadAdminOverview();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedRole, selectedMenu]);
 
 
@@ -2399,6 +2536,10 @@ function App() {
     setAttendanceMessage("");
     setNotifications([]);
     setUnreadNotificationCount(0);
+    setParentChildren([]);
+    setSelectedParentChildId(null);
+    setAttendanceHistory([]);
+    setTravelStatus(null);
 
     setTripId(null);
     setTripStatus("NOT_STARTED");
@@ -2509,10 +2650,17 @@ function App() {
   // TRAVEL STATUS
   // ============================================================
 
-  const loadTravelStatus = async () => {
+  const loadTravelStatus = async (
+    studentId = selectedParentChild?.id
+  ) => {
 
     const token =
       localStorage.getItem("token");
+
+    if (!studentId) {
+      setTravelStatus(null);
+      return;
+    }
 
     if (!token) {
       return;
@@ -2529,7 +2677,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/status/1?travel_date=${travelDate}`,
+          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/status/${studentId}?travel_date=${travelDate}`,
           {
             method: "GET",
 
@@ -2581,7 +2729,14 @@ function App() {
           "token"
         );
 
+      const studentId = selectedParentChild?.id;
+
       if (!token) {
+        return;
+      }
+
+      if (!studentId) {
+        alert("No child is linked to this parent account. Please contact the administrator.");
         return;
       }
 
@@ -2609,7 +2764,7 @@ function App() {
               },
 
               body: JSON.stringify({
-                student_id: 1,
+                student_id: studentId,
                 status: status,
                 travel_date: travelDate,
               }),
@@ -2653,18 +2808,21 @@ function App() {
     };
 
 
-  // Load today's travel status when Parent Dashboard opens.
+  // Load travel status for the child linked to this parent.
   useEffect(() => {
 
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
+    if (selectedRole !== "PARENT_HOME") {
       return;
     }
 
-    loadTravelStatus();
+    if (!selectedParentChild?.id) {
+      setTravelStatus(null);
+      return;
+    }
 
-  }, [selectedRole]);
+    loadTravelStatus(selectedParentChild.id);
+
+  }, [selectedRole, selectedParentChild?.id]);
 
 
   // ============================================================
@@ -2839,7 +2997,7 @@ function App() {
     });
 
     setGpsStatus(
-      `GPS LIVE â€¢ Accuracy Â±${Math.round(accuracy)} m`
+      `GPS LIVE • Accuracy ±${Math.round(accuracy)} m`
     );
 
     // Limit backend writes to roughly one every 3 seconds.
@@ -2920,7 +3078,7 @@ function App() {
       );
 
       setGpsStatus(
-        `GPS LIVE â€¢ Â±${Math.round(accuracy)} m â€¢ uploaded`
+        `GPS LIVE • ±${Math.round(accuracy)} m • uploaded`
       );
 
     } catch (error) {
@@ -3471,7 +3629,7 @@ function App() {
         <div className="splash-content">
 
           <div className="splash-icon">
-            ðŸšŒ
+            🚌
           </div>
 
 
@@ -3510,7 +3668,7 @@ function App() {
           <div className="brand-section">
 
             <div className="brand-icon">
-              ðŸšŒ
+              🚌
             </div>
 
 
@@ -3540,7 +3698,7 @@ function App() {
             >
 
               <span className="role-icon">
-                ðŸ‘¨â€ðŸ‘©â€ðŸ‘§
+                👨‍👩‍👧
               </span>
 
 
@@ -3559,7 +3717,7 @@ function App() {
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3575,7 +3733,7 @@ function App() {
             >
 
               <span className="role-icon">
-                ðŸšŒ
+                🚌
               </span>
 
 
@@ -3594,7 +3752,7 @@ function App() {
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3610,7 +3768,7 @@ function App() {
             >
 
               <span className="role-icon">
-                ðŸ› ï¸
+                🛠️
               </span>
 
 
@@ -3629,7 +3787,7 @@ function App() {
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3662,7 +3820,7 @@ function App() {
       "Login";
 
     let roleIcon =
-      "ðŸ”";
+      "🔐";
 
 
     if (
@@ -3674,7 +3832,7 @@ function App() {
         "Parent Login";
 
       roleIcon =
-        "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§";
+        "👨‍👩‍👧";
 
     }
 
@@ -3688,7 +3846,7 @@ function App() {
         "Driver Login";
 
       roleIcon =
-        "ðŸšŒ";
+        "🚌";
 
     }
 
@@ -3702,7 +3860,7 @@ function App() {
         "Admin Login";
 
       roleIcon =
-        "ðŸ› ï¸";
+        "🛠️";
 
     }
 
@@ -3727,7 +3885,7 @@ function App() {
 
             }}
           >
-            â† Back
+            ← Back
           </button>
 
 
@@ -3822,7 +3980,7 @@ function App() {
 
         <header className="admin-style-header">
           <div className="admin-style-brand">
-            <div className="admin-style-logo">ðŸšŒ</div>
+            <div className="admin-style-logo">🚌</div>
             <div>
               <p>Smart Student Bus</p>
               <h1>Parent</h1>
@@ -3838,7 +3996,7 @@ function App() {
               }}
               title="Notifications"
             >
-              ðŸ””
+              🔔
               {unreadNotificationCount > 0 && (
                 <span className="notification-dot"></span>
               )}
@@ -3851,7 +4009,7 @@ function App() {
             >
               <span className="header-avatar">P</span>
               <span className="header-role-text">Parent</span>
-              <span className="header-chevron">âŒ„</span>
+              <span className="header-chevron">⌄</span>
             </button>
           </div>
         </header>
@@ -3860,7 +4018,7 @@ function App() {
 
           <section className="admin-style-map-panel">
             <div className="admin-style-map-title">
-              <span className="admin-style-map-title-icon">ðŸ“</span>
+              <span className="admin-style-map-title-icon">📍</span>
               <div>
                 <strong>Live Bus Tracking</strong>
                 <small>Track your child's bus in real time</small>
@@ -3890,7 +4048,7 @@ function App() {
                 ]}
               >
                 <Popup>
-                  <strong>ðŸ« Shetty Institute of Technology</strong>
+                  <strong>🏫 Shetty Institute of Technology</strong>
                   <br />
                   School
                 </Popup>
@@ -3904,9 +4062,9 @@ function App() {
                   ]}
                 >
                   <Popup>
-                    <strong>ðŸšŒ BUS001</strong>
+                    <strong>🚌 BUS001</strong>
                     <br />
-                    Mahantesh's school bus
+                    {selectedParentChild?.name || "Your child's"} school bus
                     <br />
                     Live location
                     <br />
@@ -3917,7 +4075,7 @@ function App() {
             </MapContainer>
 
             <div className="admin-style-floating-bus">
-              <div className="admin-style-bus-icon">ðŸšŒ</div>
+              <div className="admin-style-bus-icon">🚌</div>
               <div>
                 <strong>BUS001</strong>
                 <span>{busLocationStatus}</span>
@@ -3930,7 +4088,7 @@ function App() {
 
           <aside className="admin-style-dashboard-panel">
             <div className="admin-style-panel-heading">
-              <div className="admin-style-panel-icon">ðŸšŒ</div>
+              <div className="admin-style-panel-icon">🚌</div>
               <div>
                 <p>SMART STUDENT BUS</p>
                 <h2>Parent Dashboard</h2>
@@ -3939,15 +4097,41 @@ function App() {
 
             <div className="admin-style-welcome">
               <p>WELCOME</p>
-              <h2>Welcome, Parent ðŸ‘‹</h2>
+              <h2>Welcome, Parent 👋</h2>
               <span>Track your child and stay updated.</span>
             </div>
 
             <div className="admin-style-child-card">
-              <div className="admin-style-child-avatar">ðŸ‘¨â€ðŸŽ“</div>
+              <div className="admin-style-child-avatar">👨‍🎓</div>
               <div>
-                <strong>Mahantesh</strong>
-                <span>STU001</span>
+                <strong>
+                  {selectedParentChild?.name || (
+                    parentChildrenLoading ? "Loading child..." : "No child linked"
+                  )}
+                </strong>
+                <span>
+                  {selectedParentChild?.student_code || (
+                    !parentChildrenLoading && parentChildren.length === 0
+                      ? "Please contact the administrator"
+                      : ""
+                  )}
+                </span>
+                {parentChildren.length > 1 && (
+                  <select
+                    aria-label="Select child"
+                    value={selectedParentChild?.id ?? ""}
+                    onChange={(event) => {
+                      setSelectedParentChildId(event.target.value);
+                    }}
+                    style={{ marginTop: "6px", maxWidth: "100%" }}
+                  >
+                    {parentChildren.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name} ({child.student_code || `ID ${child.id}`})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <span
                 className={
@@ -3958,7 +4142,7 @@ function App() {
                       : "dashboard-status"
                 }
               >
-                â— {travelStatus === "COMING"
+                {travelStatus === "COMING"
                   ? "COMING"
                   : travelStatus === "NOT_COMING"
                     ? "NOT COMING"
@@ -3969,7 +4153,7 @@ function App() {
             <div className="admin-style-detail-list">
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“…</span>
+                <span>📅</span>
                 <div>
                   <strong>Today's Status</strong>
                   <small>
@@ -3983,23 +4167,23 @@ function App() {
                     <button
                       className={travelStatus === "COMING" ? "selected" : ""}
                       onClick={() => updateTravelStatus("COMING")}
-                      disabled={travelStatusLoading}
+                      disabled={travelStatusLoading || !selectedParentChild}
                     >
-                      ðŸšŒ Coming
+                      🚌 Coming
                     </button>
                     <button
                       className={travelStatus === "NOT_COMING" ? "selected" : ""}
                       onClick={() => updateTravelStatus("NOT_COMING")}
-                      disabled={travelStatusLoading}
+                      disabled={travelStatusLoading || !selectedParentChild}
                     >
-                      ðŸš« Not Coming
+                      🚫 Not Coming
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <div>
                   <strong>Pickup Time</strong>
                   <small>07:45 AM</small>
@@ -4007,7 +4191,7 @@ function App() {
               </div>
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <div>
                   <strong>Drop Time</strong>
                   <small>03:30 PM</small>
@@ -4034,9 +4218,9 @@ function App() {
 
             <div className="admin-style-quick-list">
               <button onClick={() => setSelectedMenu("bus-schedule")}>
-                <span>ðŸšŒ</span>
+                <span>🚌</span>
                 <strong>Bus Schedule</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4045,9 +4229,9 @@ function App() {
                   loadAttendanceHistory();
                 }}
               >
-                <span>ðŸ“…</span>
+                <span>📅</span>
                 <strong>Attendance Calendar</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4056,15 +4240,15 @@ function App() {
                   loadParentNotifications();
                 }}
               >
-                <span>ðŸ””</span>
+                <span>🔔</span>
                 <strong>Notifications</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button onClick={() => setSelectedMenu("my-profile")}>
-                <span>ðŸ‘¤</span>
+                <span>👤</span>
                 <strong>My Profile</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
             </div>
           </aside>
@@ -4076,7 +4260,7 @@ function App() {
             className={!selectedMenu ? "active" : ""}
             onClick={() => setSelectedMenu(null)}
           >
-            <span>ðŸ </span>
+            <span>🏠</span>
             <small>Home</small>
           </button>
 
@@ -4084,7 +4268,7 @@ function App() {
             className={selectedMenu === "bus-schedule" ? "active" : ""}
             onClick={() => setSelectedMenu("bus-schedule")}
           >
-            <span>ðŸšŒ</span>
+            <span>🚌</span>
             <small>Bus</small>
           </button>
 
@@ -4095,7 +4279,7 @@ function App() {
               loadAttendanceHistory();
             }}
           >
-            <span>ðŸ“…</span>
+            <span>📅</span>
             <small>Calendar</small>
           </button>
 
@@ -4106,7 +4290,7 @@ function App() {
               loadParentNotifications();
             }}
           >
-            <span>ðŸ””</span>
+            <span>🔔</span>
             <small>Notifications</small>
           </button>
 
@@ -4114,7 +4298,7 @@ function App() {
             className={selectedMenu === "my-profile" ? "active" : ""}
             onClick={() => setSelectedMenu("my-profile")}
           >
-            <span>ðŸ‘¤</span>
+            <span>👤</span>
             <small>Profile</small>
           </button>
         </nav>
@@ -4131,7 +4315,7 @@ function App() {
 
               }}
             >
-              Ã—
+              ×
             </button>
 
 
@@ -4141,7 +4325,7 @@ function App() {
               <>
 
                 <h2>
-                  ðŸšŒ Bus Information
+                  🚌 Bus Information
                 </h2>
 
 
@@ -4206,7 +4390,7 @@ function App() {
                       cursor: "pointer",
                     }}
                   >
-                    â†
+                    ←
                   </button>
 
                   <div
@@ -4216,7 +4400,7 @@ function App() {
                     }}
                   >
                     <h2 style={{ margin: 0 }}>
-                      ðŸ“… Attendance Calendar
+                      📅 Attendance Calendar
                     </h2>
 
                     <strong>
@@ -4240,7 +4424,7 @@ function App() {
                       cursor: "pointer",
                     }}
                   >
-                    â†’
+                    →
                   </button>
 
                 </div>
@@ -4283,7 +4467,7 @@ function App() {
                   >
                     {attendanceHistoryLoading
                       ? "Refreshing..."
-                      : "â†» Refresh"}
+                      : "→» Refresh"}
                   </button>
 
                 </div>
@@ -4405,8 +4589,8 @@ function App() {
                                 }}
                               >
                                 {came
-                                  ? "ðŸŸ¢ Came to Bus"
-                                  : "âšª No record"}
+                                  ? "🟢 Came to Bus"
+                                  : "⚪ No record"}
                               </div>
 
                             </div>
@@ -4425,8 +4609,8 @@ function App() {
                         fontSize: "13px",
                       }}
                     >
-                      <div>ðŸŸ¢ Came to Bus</div>
-                      <div>âšª No attendance record</div>
+                      <div>🟢 Came to Bus</div>
+                      <div>⚪ No attendance record</div>
                     </div>
 
                   </>
@@ -4444,7 +4628,7 @@ function App() {
               <>
 
                 <h2>
-                  ðŸ”” Notifications
+                  🔔 Notifications
                 </h2>
 
 
@@ -4524,7 +4708,7 @@ function App() {
               <>
 
                 <h2>
-                  ðŸ‘¤ My Profile
+                  👤 My Profile
                 </h2>
 
 
@@ -4587,7 +4771,7 @@ function App() {
 
         <header className="admin-style-header">
           <div className="admin-style-brand">
-            <div className="admin-style-logo">ðŸšŒ</div>
+            <div className="admin-style-logo">🚌</div>
             <div>
               <p>Smart Student Bus</p>
               <h1>Driver</h1>
@@ -4600,7 +4784,7 @@ function App() {
               onClick={() => setSelectedMenu("alerts")}
               title="Alerts"
             >
-              ðŸ””
+              🔔
             </button>
 
             <button
@@ -4610,7 +4794,7 @@ function App() {
             >
               <span className="header-avatar">D</span>
               <span className="header-role-text">Driver</span>
-              <span className="header-chevron">âŒ„</span>
+              <span className="header-chevron">⌄</span>
             </button>
           </div>
         </header>
@@ -4619,7 +4803,7 @@ function App() {
 
           <section className="admin-style-map-panel">
             <div className="admin-style-map-title">
-              <span className="admin-style-map-title-icon">ðŸ“</span>
+              <span className="admin-style-map-title-icon">📍</span>
               <div>
                 <strong>Live Bus Location</strong>
                 <small>Your current location in real time</small>
@@ -4650,17 +4834,17 @@ function App() {
                     ]}
                   >
                     <Popup>
-                      <strong>ðŸšŒ BUS001</strong>
+                      <strong>🚌 BUS001</strong>
                       <br />
                       Live driver location
                       <br />
-                      Accuracy: Â±{Math.round(driverLocation.accuracy)} m
+                      Accuracy: ±{Math.round(driverLocation.accuracy)} m
                     </Popup>
                   </Marker>
                 </MapContainer>
               ) : (
                 <div className="admin-style-map-empty">
-                  <div>ðŸ“</div>
+                  <div>📍</div>
                   <strong>Waiting for live device location</strong>
                   <p>Start the trip to begin live tracking.</p>
                 </div>
@@ -4668,7 +4852,7 @@ function App() {
             </div>
 
             <div className="admin-style-floating-bus">
-              <div className="admin-style-bus-icon">ðŸšŒ</div>
+              <div className="admin-style-bus-icon">🚌</div>
               <div>
                 <strong>BUS001</strong>
                 <span>{gpsStatus}</span>
@@ -4682,7 +4866,7 @@ function App() {
           <aside className="admin-style-dashboard-panel">
 
             <div className="admin-style-panel-heading">
-              <div className="admin-style-panel-icon">ðŸšŒ</div>
+              <div className="admin-style-panel-icon">🚌</div>
               <div>
                 <p>SMART STUDENT BUS</p>
                 <h2>Driver Dashboard</h2>
@@ -4691,28 +4875,28 @@ function App() {
 
             <div className="admin-style-welcome">
               <p>DRIVER</p>
-              <h2>Good morning, Driver ðŸ‘‹</h2>
+              <h2>Good morning, Driver 👋</h2>
               <span>Manage your trip and students.</span>
             </div>
 
             <div className="admin-style-child-card driver-bus-summary">
-              <div className="admin-style-child-avatar">ðŸšŒ</div>
+              <div className="admin-style-child-avatar">🚌</div>
               <div>
                 <strong>BUS001</strong>
                 <span>Main School Route</span>
                 <small>Driver: Ramesh Kumar</small>
               </div>
-              <span className="dashboard-status coming">â— ASSIGNED</span>
+              <span className="dashboard-status coming">• ASSIGNED</span>
             </div>
 
             <div className="admin-style-trip-buttons">
               {tripStatus !== "IN_PROGRESS" ? (
                 <button className="start-trip" onClick={startTrip}>
-                  â–¶ Start Trip
+                  ▶ Start Trip
                 </button>
               ) : (
                 <button className="stop-trip" onClick={stopTrip}>
-                  â–  Stop Trip
+                  ■  Stop Trip
                 </button>
               )}
             </div>
@@ -4721,17 +4905,17 @@ function App() {
 
             <div className="admin-style-student-counts">
               <div>
-                <span>ðŸŸ¢</span>
+                <span>🟢</span>
                 <strong>{travelSummary.coming}</strong>
                 <small>Coming</small>
               </div>
               <div>
-                <span>ðŸ”´</span>
+                <span>🔴</span>
                 <strong>{travelSummary.notComing}</strong>
                 <small>Not Coming</small>
               </div>
               <div>
-                <span>âšª</span>
+                <span>⚪</span>
                 <strong>{travelSummary.noStatus}</strong>
                 <small>No Status</small>
               </div>
@@ -4741,9 +4925,9 @@ function App() {
 
             <div className="admin-style-quick-list">
               <button onClick={() => setSelectedMenu("students")}>
-                <span>ðŸ‘¥</span>
+                <span>👥</span>
                 <strong>Student Attendance</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4754,9 +4938,9 @@ function App() {
                   })
                 }
               >
-                <span>ðŸ“·</span>
+                <span>📷</span>
                 <strong>Face Recognition</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4767,15 +4951,15 @@ function App() {
                   })
                 }
               >
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <strong>GPS / Alerts</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button onClick={() => setSelectedMenu("my-profile")}>
-                <span>ðŸ‘¤</span>
+                <span>👤</span>
                 <strong>My Profile</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
             </div>
 
@@ -4795,7 +4979,7 @@ function App() {
                     className="attendance-row"
                   >
                     <div className="attendance-item">
-                      <span className="attendance-icon">ðŸ‘¨â€ðŸŽ“</span>
+                      <span className="attendance-icon">👨‍🎓</span>
                       <div>
                         <strong>{student.student_name}</strong>
                         <p>{student.student_code}</p>
@@ -4810,10 +4994,10 @@ function App() {
                       }
                     >
                       {student.status === "COMING"
-                        ? "ðŸŸ¢ COMING"
+                        ? "🟢 COMING"
                         : student.status === "NOT_COMING"
-                          ? "ðŸ”´ NOT COMING"
-                          : "âšª NO STATUS"}
+                          ? "🔴 NOT COMING"
+                          : "⚪ NO STATUS"}
                     </span>
                   </div>
                 ))}
@@ -4858,7 +5042,7 @@ function App() {
               <div className="camera-overlay">
 
                 <span className="camera-large-icon">
-                  ðŸ“·
+                  📷
                 </span>
 
 
@@ -4897,7 +5081,7 @@ function App() {
                   const label =
                     recognizedFace &&
                     recognizedFace.recognized
-                      ? `âœ“ ${recognizedFace.name}`
+                      ? `✓ ${recognizedFace.name}`
                       : "Face detected";
 
 
@@ -4960,7 +5144,7 @@ function App() {
 
             {cameraActive
               ? "â¹ Stop Camera"
-              : "ðŸ“· Start Camera"}
+              : "📷 Start Camera"}
 
           </button>
 
@@ -4970,7 +5154,7 @@ function App() {
             <p className="detection-status">
 
               {detecting
-                ? `ðŸ” Detecting faces... (${detectedFaces.length} found)`
+                ? `🔍 Detecting faces... (${detectedFaces.length} found)`
                 : "Camera ready"}
 
             </p>
@@ -4992,7 +5176,7 @@ function App() {
                   >
 
                     {face.recognized
-                      ? `âœ“ ${face.name} (${face.student_code})`
+                      ? `✓ ${face.name} (${face.student_code})`
                       : "âš  Unknown student"}
 
                   </p>
@@ -5009,7 +5193,7 @@ function App() {
 
             <p className="detection-status">
 
-              âœ“ {attendanceMessage}
+              ✓ {attendanceMessage}
 
             </p>
 
@@ -5032,7 +5216,7 @@ function App() {
             <div className="attendance-item">
 
               <span className="attendance-icon">
-                ðŸ‘¤
+                👤
               </span>
 
 
@@ -5104,7 +5288,7 @@ function App() {
             <div className="attendance-item">
 
               <span className="attendance-icon">
-                ðŸ“
+                📍
               </span>
 
 
@@ -5146,7 +5330,7 @@ function App() {
 
                     Accuracy:
                     {" "}
-                    Â±{Math.round(driverLocation.accuracy)} m
+                    ±{Math.round(driverLocation.accuracy)} m
 
                   </p>
 
@@ -5195,7 +5379,7 @@ function App() {
             className={!selectedMenu ? "active" : ""}
             onClick={() => setSelectedMenu(null)}
           >
-            <span>ðŸ </span>
+            <span>🏠</span>
             <small>Home</small>
           </button>
 
@@ -5203,7 +5387,7 @@ function App() {
             className={selectedMenu === "students" ? "active" : ""}
             onClick={() => setSelectedMenu("students")}
           >
-            <span>ðŸ‘¥</span>
+            <span>👥</span>
             <small>Students</small>
           </button>
 
@@ -5216,7 +5400,7 @@ function App() {
               })
             }
           >
-            <span>ðŸšŒ</span>
+            <span>🚌</span>
             <small>Trip</small>
           </button>
 
@@ -5229,7 +5413,7 @@ function App() {
               })
             }
           >
-            <span>ðŸ“</span>
+            <span>📍</span>
             <small>GPS</small>
           </button>
 
@@ -5237,7 +5421,7 @@ function App() {
             className={selectedMenu === "my-profile" ? "active" : ""}
             onClick={() => setSelectedMenu("my-profile")}
           >
-            <span>ðŸ‘¤</span>
+            <span>👤</span>
             <small>Profile</small>
           </button>
         </nav>
@@ -5271,7 +5455,7 @@ function App() {
         <header className="parent-header admin-reference-header">
 
           <div className="admin-reference-brand">
-            <div className="admin-reference-logo">ðŸšŒ</div>
+            <div className="admin-reference-logo">🚌</div>
 
             <div>
               <p className="admin-reference-brand-name">
@@ -5291,7 +5475,7 @@ function App() {
               onClick={() => setSelectedMenu("notifications")}
               title="Notifications"
             >
-              ðŸ””
+              🔔
             </button>
 
             <button
@@ -5308,7 +5492,7 @@ function App() {
               </span>
 
               <span className="admin-reference-chevron">
-                âŒ„
+                ⌄
               </span>
             </button>
 
@@ -5323,7 +5507,7 @@ function App() {
           <div className="admin-sidebar-brand">
 
             <div className="admin-sidebar-logo">
-              ðŸšŒ
+              🚌
             </div>
 
             <div>
@@ -5350,7 +5534,7 @@ function App() {
               }
               onClick={() => setSelectedMenu(null)}
             >
-              <span>ðŸ </span>
+              <span>🏠</span>
               <span>Dashboard</span>
             </button>
 
@@ -5364,7 +5548,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("students")}
             >
-              <span>ðŸ‘¨â€ðŸŽ“</span>
+              <span>👨‍🎓</span>
               <span>Students</span>
             </button>
 
@@ -5377,7 +5561,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("buses")}
             >
-              <span>ðŸšŒ</span>
+              <span>🚌</span>
               <span>Buses</span>
             </button>
 
@@ -5390,7 +5574,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("drivers")}
             >
-              <span>ðŸ‘¨â€âœˆï¸</span>
+              <span>👨‍✈️</span>
               <span>Drivers</span>
             </button>
 
@@ -5403,7 +5587,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("parents")}
             >
-              <span>ðŸ‘¨â€ðŸ‘©â€ðŸ‘§</span>
+              <span>👨‍👩‍👧</span>
               <span>Parents</span>
             </button>
 
@@ -5416,7 +5600,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("stop-management")}
             >
-              <span>ðŸ—ºï¸</span>
+              <span>🗺️</span>
               <span>Routes & Stops</span>
             </button>
 
@@ -5429,7 +5613,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("live-bus-location")}
             >
-              <span>ðŸ“</span>
+              <span>📍</span>
               <span>Live Bus Tracking</span>
             </button>
 
@@ -5442,7 +5626,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("attendance")}
             >
-              <span>ðŸ“Š</span>
+              <span>📊</span>
               <span>Attendance</span>
             </button>
 
@@ -5465,7 +5649,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("notifications")}
             >
-              <span>ðŸ””</span>
+              <span>🔔</span>
               <span>Notifications</span>
             </button>
 
@@ -5478,7 +5662,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("announcements")}
             >
-              <span>ðŸ“¢</span>
+              <span>📢</span>
               <span>Announcements</span>
             </button>
 
@@ -5501,7 +5685,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("settings")}
             >
-              <span>âš™ï¸</span>
+              <span>⚙️</span>
               <span>Settings</span>
             </button>
 
@@ -5514,7 +5698,7 @@ function App() {
               }
               onClick={() => setSelectedMenu("my-profile")}
             >
-              <span>ðŸ‘¤</span>
+              <span>👤</span>
               <span>My Profile</span>
             </button>
 
@@ -5528,7 +5712,7 @@ function App() {
               className="admin-sidebar-item admin-logout-item"
               onClick={logout}
             >
-              <span>ðŸšª</span>
+              <span>🚪</span>
               <span>Logout</span>
             </button>
 
@@ -5953,7 +6137,7 @@ function App() {
               <div className="figma-student-toolbar">
 
                 <div className="figma-student-search-wrap">
-                  <span className="figma-student-search-icon" aria-hidden="true">âŒ•</span>
+                  <span className="figma-student-search-icon" aria-hidden="true">⌕</span>
                   <input
                     type="search"
                     value={studentSearch}
@@ -6084,7 +6268,7 @@ function App() {
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <strong>{student.student_code || "â€”"}</strong>
+                            <strong>{student.student_code || "—"}</strong>
                             <small>{student.class_name || "CLASS NOT ASSIGNED"}</small>
                           </div>
 
@@ -6209,7 +6393,7 @@ function App() {
                     <div className="camera-overlay">
 
                       <span className="camera-large-icon">
-                        ðŸ“·
+                        📷
                       </span>
 
                       <p>
@@ -6294,7 +6478,7 @@ function App() {
                 >
                   {cameraActive
                     ? "â¹ Stop Camera"
-                    : "ðŸ“· Start Camera"}
+                    : "📷 Start Camera"}
                 </button>
 
 
@@ -6309,7 +6493,7 @@ function App() {
                 >
                   {registering
                     ? "Registering..."
-                    : "âœ“ Save Face"}
+                    : "✓ Save Face"}
                 </button>
 
 
@@ -6329,6 +6513,19 @@ function App() {
 
         )}
 
+        {selectedMenu && ![
+          "students",
+          "student-management",
+          "stop-management",
+        ].includes(selectedMenu) && (
+          <AdminWorkspace
+            selectedMenu={selectedMenu}
+            token={localStorage.getItem("token")}
+            busLocation={busLocation}
+            busLocationStatus={busLocationStatus}
+          />
+        )}
+
         {/* SYSTEM OVERVIEW */}
 
         <section className="bus-info-card admin-reference-summary-card">
@@ -6343,7 +6540,7 @@ function App() {
             <div className="bus-info-item">
 
               <span className="bus-info-icon">
-                ðŸ‘¨â€ðŸŽ“
+                👨‍🎓
               </span>
 
 
@@ -6355,7 +6552,7 @@ function App() {
 
 
                 <strong>
-                  {students.length || 1}
+                  {adminOverview.students ?? students.length}
                 </strong>
 
               </div>
@@ -6366,7 +6563,7 @@ function App() {
             <div className="bus-info-item">
 
               <span className="bus-info-icon">
-                ðŸšŒ
+                🚌
               </span>
 
 
@@ -6378,7 +6575,7 @@ function App() {
 
 
                 <strong>
-                  1
+                  {adminOverview.buses ?? 0}
                 </strong>
 
               </div>
@@ -6389,7 +6586,7 @@ function App() {
             <div className="bus-info-item">
 
               <span className="bus-info-icon">
-                ðŸ‘¨â€âœˆï¸
+                👨‍✈️
               </span>
 
 
@@ -6401,7 +6598,7 @@ function App() {
 
 
                 <strong>
-                  1
+                  {adminOverview.drivers ?? 0}
                 </strong>
 
               </div>
@@ -6412,7 +6609,7 @@ function App() {
             <div className="bus-info-item">
 
               <span className="bus-info-icon">
-                ðŸ‘¨â€ðŸ‘©â€ðŸ‘§
+                👨‍👩‍👧
               </span>
 
 
@@ -6424,7 +6621,7 @@ function App() {
 
 
                 <strong>
-                  2
+                  {adminOverview.parents ?? 0}
                 </strong>
 
               </div>
@@ -6473,7 +6670,7 @@ function App() {
                 ]}
               >
                 <Popup>
-                  <strong>ðŸ« Shetty Institute of Technology</strong>
+                  <strong>🏫 Shetty Institute of Technology</strong>
                   <br />
                   School
                 </Popup>
@@ -6492,7 +6689,7 @@ function App() {
                     <Popup>
 
                       <strong>
-                        ðŸšŒ BUS001
+                        🚌 BUS001
                       </strong>
 
                       <br />
@@ -6536,7 +6733,7 @@ function App() {
             <div>
 
               <strong>
-                ðŸšŒ BUS001
+                🚌 BUS001
               </strong>
 
 
@@ -6584,7 +6781,7 @@ function App() {
           >
 
             <span>
-              ðŸ‘¨â€ðŸŽ“
+              👨‍🎓
             </span>
 
 
@@ -6607,7 +6804,7 @@ function App() {
           <button className="action-card">
 
             <span>
-              ðŸšŒ
+              🚌
             </span>
 
 
@@ -6630,7 +6827,7 @@ function App() {
           <button className="action-card">
 
             <span>
-              ðŸ‘¨â€âœˆï¸
+              👨‍✈️
             </span>
 
 
@@ -6653,7 +6850,7 @@ function App() {
           <button className="action-card">
 
             <span>
-              ðŸ—ºï¸
+              🗺️
             </span>
 
 
@@ -6676,7 +6873,7 @@ function App() {
           <button className="action-card">
 
             <span>
-              ðŸ“Š
+              📊
             </span>
 
 
@@ -6699,7 +6896,7 @@ function App() {
           <button className="action-card">
 
             <span>
-              ðŸ””
+              🔔
             </span>
 
 

@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+﻿from flask import Flask, jsonify
 from flask_cors import CORS
 
 from auth_routes import auth_bp
@@ -16,6 +16,7 @@ from notification_routes import notification_bp
 from location_routes import location_bp
 from core_routes import core_bp
 from stop_routes import stop_bp
+from admin_routes import admin_bp
 
 from database import get_connection, initialize_database
 from production_accounts import bootstrap_production_accounts
@@ -35,9 +36,15 @@ CORS(
     app,
     resources={
         r"/api/*": {
-            "origins": Config.CORS_ORIGINS
+            "origins": [
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5177",
+                "https://smart-student-bus-tracker.onrender.com"
+            ]
         }
-    }
+    },
+    supports_credentials=True
 )
 
 
@@ -60,6 +67,7 @@ app.register_blueprint(location_bp)
 app.register_blueprint(core_bp)
 app.register_blueprint(stop_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
 
 
 # =========================================================
