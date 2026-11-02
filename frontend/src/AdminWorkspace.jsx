@@ -3,12 +3,13 @@ import {
   MapContainer,
   Marker,
   Popup,
+  Polyline,
   TileLayer,
 } from "react-leaflet";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
-  "https://smart-student-bus-tracker-backend.onrender.com"
+  "http://127.0.0.1:5000"
 ).replace(/\/+$/, "");
 
 async function adminRequest(path, token, options = {}) {
@@ -69,7 +70,7 @@ const PAGE_META = {
     eyebrow: "LIVE OPERATIONS",
     title: "Live bus tracking",
     description:
-      "Monitor the latest reported bus position and current tracking status.",
+      "Monitor the latest GPS position of every bus and view its assigned route.",
     icon: "📍",
   },
 
@@ -184,6 +185,54 @@ function StatusChip({
   );
 }
 
+// Accept the route-stop shapes returned by the route management APIs.
+// Stops are sorted in route order so the map draws the route in travel order.
+function getRouteCoordinates(route, allStops = []) {
+  const linkedStops = allStops.filter(
+    (stop) => String(stop.route_id) === String(route?.id)
+  );
+  const routeStops = linkedStops.length
+    ? linkedStops
+    : (route?.stops ||
+      route?.route_stops ||
+      route?.routeStops ||
+      route?.points ||
+      route?.coordinates ||
+      []);
+
+  if (!Array.isArray(routeStops)) return [];
+
+  return routeStops
+    .map((stop, index) => ({
+      order: Number(
+        stop?.stop_order ??
+        stop?.sequence ??
+        stop?.order ??
+        stop?.position ??
+        index
+      ),
+      latitude: Number(
+        stop?.latitude ?? stop?.lat ?? stop?.stop_latitude
+      ),
+      longitude: Number(
+        stop?.longitude ?? stop?.lng ?? stop?.lon ?? stop?.stop_longitude
+      ),
+    }))
+    .filter(
+      (stop) =>
+        Number.isFinite(stop.latitude) &&
+        Number.isFinite(stop.longitude) &&
+        Math.abs(stop.latitude) <= 90 &&
+        Math.abs(stop.longitude) <= 180
+    )
+    .sort((a, b) => a.order - b.order)
+    .map((stop) => [stop.latitude, stop.longitude]);
+}
+
+function getBusRouteId(bus) {
+  return bus?.route_id ?? bus?.assigned_route_id ?? bus?.route?.id ?? null;
+}
+
 export default function AdminWorkspace({
   selectedMenu,
   token,
@@ -199,6 +248,7 @@ export default function AdminWorkspace({
   const [buses, setBuses] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [routes, setRoutes] = useState([]);
+  const [stops, setStops] = useState([]);
   const [parents, setParents] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -301,16 +351,19 @@ export default function AdminWorkspace({
           }
 
           case "live-bus-location": {
-            const data = await adminRequest(
-              "/api/admin/buses",
-              token
-            );
+            const [data, routeData, stopData] = await Promise.all([
+              adminRequest("/api/admin/buses", token),
+              adminRequest("/api/admin/routes", token),
+              adminRequest("/api/stops", token),
+            ]);
 
             if (cancelled) return;
 
             const list = data.buses || [];
 
             setBuses(list);
+            setRoutes(routeData.routes || []);
+            setStops(stopData.stops || []);
 
             const preferred =
               list.find((bus) => String(bus.id) === String(selectedBusId)) ||
@@ -436,11 +489,17 @@ export default function AdminWorkspace({
 
     const refreshFleet = async () => {
       try {
-        const data = await adminRequest("/api/admin/buses", token);
+        const [data, routeData, stopData] = await Promise.all([
+          adminRequest("/api/admin/buses", token),
+          adminRequest("/api/admin/routes", token),
+          adminRequest("/api/stops", token),
+        ]);
         if (cancelled) return;
 
         const list = data.buses || [];
         setBuses(list);
+        setRoutes(routeData.routes || []);
+        setStops(stopData.stops || []);
 
         const selected =
           list.find((bus) => String(bus.id) === String(selectedBusId)) ||
@@ -1516,7 +1575,7 @@ export default function AdminWorkspace({
               <div>
                 <h3>Fleet map</h3>
                 <p>
-                  Each marker represents a bus with a current active-trip GPS report. Refreshes automatically every 10 seconds.
+                  Every bus with a GPS report is shown, along with its assigned route when route-stop coordinates are available. Refreshes every 10 seconds.
                 </p>
               </div>
 
@@ -1560,6 +1619,29 @@ export default function AdminWorkspace({
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
+                {/* Draw each assigned bus route using its route-stop coordinates. */}
+                {buses
+                  .filter((bus) => getBusRouteId(bus) != null)
+                  .map((bus) => {
+                    const route = routes.find(
+                      (item) => String(item.id) === String(getBusRouteId(bus))
+                    );
+                    const positions = getRouteCoordinates(route, stops);
+                    if (positions.length < 2) return null;
+
+                    return (
+                      <Polyline
+                        key={`route-${bus.id}-${getBusRouteId(bus)}`}
+                        positions={positions}
+                        pathOptions={{
+                          color: "#2563eb",
+                          weight: 5,
+                          opacity: 0.78,
+                        }}
+                      />
+                    );
+                  })}
+
                 {buses
                   .filter((bus) =>
                     bus.latitude !== null && bus.latitude !== undefined &&
@@ -1586,7 +1668,7 @@ export default function AdminWorkspace({
               {!buses.some((bus) => bus.latitude != null && bus.longitude != null) && (
                 <div className="adm-map-overlay">
                   <strong>Waiting for fleet GPS</strong>
-                  <span>Start a trip from a Driver account. Every active bus will appear here after its first GPS update.</span>
+                  <span>Start a trip from each Driver account. A bus appears after its first GPS report; route lines require saved route-stop coordinates.</span>
                 </div>
               )}
             </div>

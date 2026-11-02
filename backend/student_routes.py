@@ -16,6 +16,38 @@ student_bp = Blueprint(
 
 
 # ============================================================
+# ENSURE ADMIN-DISPLAY PASSWORD COLUMN EXISTS
+# ============================================================
+#
+# The normal login password remains securely hashed in users.password_hash.
+# This separate field is only for the Admin UI in this academic/demo project,
+# because the Admin explicitly requested the current parent password to be
+# visible in Student Management.
+#
+# NOTE: Storing plaintext passwords is NOT recommended for production systems.
+# ============================================================
+
+def ensure_admin_password_column(connection):
+    columns = connection.execute(
+        "PRAGMA table_info(parents)"
+    ).fetchall()
+
+    column_names = {
+        row["name"]
+        for row in columns
+    }
+
+    if "admin_password" not in column_names:
+        connection.execute(
+            """
+            ALTER TABLE parents
+            ADD COLUMN admin_password TEXT
+            """
+        )
+        connection.commit()
+
+
+# ============================================================
 # GENERATE NEXT UNUSED STUDENT CODE
 # ============================================================
 
@@ -186,6 +218,9 @@ def create_student():
         data.get("email", "")
     ).strip()
 
+    pickup_stop_id = data.get("pickup_stop_id") or None
+    drop_stop_id = data.get("drop_stop_id") or None
+
     # Optional:
     # If supplied, this student will be linked
     # to an existing family account.
@@ -244,6 +279,24 @@ def create_student():
 
     try:
 
+        ensure_admin_password_column(connection)
+
+        # Validate optional pickup/drop stop assignments.
+        for field_name, stop_id in (("pickup_stop_id", pickup_stop_id), ("drop_stop_id", drop_stop_id)):
+            if stop_id is None:
+                continue
+            try:
+                stop_id = int(stop_id)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": f"{field_name} must be a valid stop ID or null."}), 400
+            exists = connection.execute("SELECT id FROM stops WHERE id = ?", (stop_id,)).fetchone()
+            if not exists:
+                return jsonify({"success": False, "message": f"Selected {field_name.replace('_id', '')} does not exist."}), 404
+            if field_name == "pickup_stop_id":
+                pickup_stop_id = stop_id
+            else:
+                drop_stop_id = stop_id
+
         # ====================================================
         # CREATE STUDENT
         # ====================================================
@@ -258,14 +311,18 @@ def create_student():
                 student_code,
                 name,
                 class_name,
+                pickup_stop_id,
+                drop_stop_id,
                 is_active
             )
-            VALUES (?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, 1)
             """,
             (
                 student_code,
                 student_name,
-                class_name
+                class_name,
+                pickup_stop_id,
+                drop_stop_id
             )
         )
 
@@ -331,6 +388,18 @@ def create_student():
                 (
                     new_password_hash,
                     parent_row["user_id"]
+                )
+            )
+
+            connection.execute(
+                """
+                UPDATE parents
+                SET admin_password = ?
+                WHERE id = ?
+                """,
+                (
+                    parent_password,
+                    parent_id
                 )
             )
 
@@ -440,9 +509,10 @@ def create_student():
                 father_name,
                 mother_name,
                 phone,
-                email
+                email,
+                admin_password
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -450,7 +520,8 @@ def create_student():
                 father_name or None,
                 mother_name or None,
                 phone or None,
-                email or None
+                email or None,
+                parent_password
             )
         )
 
@@ -546,6 +617,8 @@ def get_students():
 
     try:
 
+        ensure_admin_password_column(connection)
+
         rows = connection.execute(
             """
             SELECT
@@ -554,6 +627,8 @@ def get_students():
                 s.name,
                 s.class_name,
                 s.bus_id,
+                s.pickup_stop_id,
+                s.drop_stop_id,
                 s.status,
                 s.is_active,
                 s.created_at,
@@ -562,6 +637,7 @@ def get_students():
                 u.username AS parent_username,
                 p.father_name,
                 p.mother_name,
+                p.admin_password AS parent_password,
 
                 CASE
                     WHEN fe.id IS NOT NULL
@@ -601,6 +677,8 @@ def get_students():
                 "name": row["name"],
                 "class_name": row["class_name"],
                 "bus_id": row["bus_id"],
+                "pickup_stop_id": row["pickup_stop_id"],
+                "drop_stop_id": row["drop_stop_id"],
                 "status": row["status"],
                 "is_active": bool(row["is_active"]),
                 "created_at": row["created_at"],
@@ -608,6 +686,7 @@ def get_students():
                 "parent": {
                     "id": row["parent_id"],
                     "username": row["parent_username"],
+                    "password": row["parent_password"],
                     "father_name": row["father_name"],
                     "mother_name": row["mother_name"]
                 },
@@ -637,6 +716,8 @@ def get_student(student_id):
 
     try:
 
+        ensure_admin_password_column(connection)
+
         row = connection.execute(
             """
             SELECT
@@ -655,7 +736,8 @@ def get_student(student_id):
                 p.father_name,
                 p.mother_name,
                 p.phone,
-                p.email
+                p.email,
+                p.admin_password AS parent_password
 
             FROM students s
 
@@ -717,6 +799,7 @@ def get_student(student_id):
             "parent": {
                 "id": row["parent_id"],
                 "username": row["parent_username"],
+                "password": row["parent_password"],
                 "family_name": row["family_name"],
                 "father_name": row["father_name"],
                 "mother_name": row["mother_name"],
@@ -807,6 +890,124 @@ def get_parent_students(parent_id):
             "students": students
         })
 
+    finally:
+        connection.close()
+
+
+# ============================================================
+# ASSIGN / CHANGE STUDENT PICKUP AND DROP STOPS
+# ============================================================
+
+@student_bp.patch("/<int:student_id>")
+@role_required("ADMIN")
+def update_student(student_id):
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    class_name = str(data.get("class_name", "")).strip()
+    bus_id = data.get("bus_id") or None
+    pickup_stop_id = data.get("pickup_stop_id") or None
+    drop_stop_id = data.get("drop_stop_id") or None
+
+    if not name or not class_name:
+        return jsonify({"success": False, "message": "Student name and class are required."}), 400
+
+    connection = get_connection()
+    try:
+        student = connection.execute("SELECT id, is_active FROM students WHERE id = ?", (student_id,)).fetchone()
+        if not student:
+            return jsonify({"success": False, "message": "Student not found."}), 404
+        if not student["is_active"]:
+            return jsonify({"success": False, "message": "Cannot edit an inactive student."}), 409
+
+        if bus_id is not None:
+            try:
+                bus_id = int(bus_id)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": "Bus ID must be valid."}), 400
+            bus = connection.execute("SELECT id FROM buses WHERE id = ?", (bus_id,)).fetchone()
+            if not bus:
+                return jsonify({"success": False, "message": "Selected bus does not exist."}), 404
+
+        for field_name, stop_id in (("pickup_stop_id", pickup_stop_id), ("drop_stop_id", drop_stop_id)):
+            if stop_id is None:
+                continue
+            try:
+                stop_id = int(stop_id)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": f"{field_name} must be a valid stop ID or null."}), 400
+            stop = connection.execute("SELECT id FROM stops WHERE id = ?", (stop_id,)).fetchone()
+            if not stop:
+                return jsonify({"success": False, "message": f"Selected {field_name.replace('_id', '')} does not exist."}), 404
+            if field_name == "pickup_stop_id":
+                pickup_stop_id = stop_id
+            else:
+                drop_stop_id = stop_id
+
+        connection.execute(
+            "UPDATE students SET name = ?, class_name = ?, bus_id = ?, pickup_stop_id = ?, drop_stop_id = ? WHERE id = ?",
+            (name, class_name, bus_id, pickup_stop_id, drop_stop_id, student_id)
+        )
+        connection.commit()
+        return jsonify({"success": True, "message": "Student details and assignments updated."}), 200
+    except Exception as error:
+        connection.rollback()
+        return jsonify({"success": False, "message": "Unable to update student.", "error": str(error)}), 500
+    finally:
+        connection.close()
+
+
+@student_bp.patch("/<int:student_id>/stops")
+@role_required("ADMIN")
+def assign_student_stops(student_id):
+    data = request.get_json(silent=True) or {}
+    pickup_stop_id = data.get("pickup_stop_id") or None
+    drop_stop_id = data.get("drop_stop_id") or None
+    connection = get_connection()
+    try:
+        student = connection.execute(
+            "SELECT id, name, is_active FROM students WHERE id = ?",
+            (student_id,)
+        ).fetchone()
+        if not student:
+            return jsonify({"success": False, "message": "Student not found."}), 404
+        if not student["is_active"]:
+            return jsonify({"success": False, "message": "Cannot assign stops to an inactive student."}), 409
+
+        for field_name, stop_id in (("pickup_stop_id", pickup_stop_id), ("drop_stop_id", drop_stop_id)):
+            if stop_id is None:
+                continue
+            try:
+                stop_id = int(stop_id)
+            except (TypeError, ValueError):
+                return jsonify({"success": False, "message": f"{field_name} must be a valid stop ID or null."}), 400
+            stop = connection.execute(
+                "SELECT id FROM stops WHERE id = ?",
+                (stop_id,)
+            ).fetchone()
+            if not stop:
+                return jsonify({"success": False, "message": f"Selected {field_name.replace('_id', '')} does not exist."}), 404
+            if field_name == "pickup_stop_id":
+                pickup_stop_id = stop_id
+            else:
+                drop_stop_id = stop_id
+
+        connection.execute(
+            "UPDATE students SET pickup_stop_id = ?, drop_stop_id = ? WHERE id = ?",
+            (pickup_stop_id, drop_stop_id, student_id)
+        )
+        connection.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Pickup and drop stops assigned to {student['name']}.",
+            "student": {
+                "id": student_id,
+                "pickup_stop_id": pickup_stop_id,
+                "drop_stop_id": drop_stop_id
+            }
+        }), 200
+    except Exception as error:
+        connection.rollback()
+        return jsonify({"success": False, "message": "Unable to assign student stops.", "error": str(error)}), 500
     finally:
         connection.close()
 

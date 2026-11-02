@@ -1,22 +1,51 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { divIcon } from "leaflet";
 
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
+  Polyline,
   useMap,
 } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 import StopManagement from "./StopManagement";
+import AdminWorkspace from "./AdminWorkspace";
 
 import {
   parentMenu,
   adminMenu,
   driverMenu,
 } from "./flowConfig";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
+
+const BUS_MAP_ICON = divIcon({
+  className: "custom-map-marker-icon",
+  html: '<div style="width:42px;height:42px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 8px #0005;display:flex;align-items:center;justify-content:center;font-size:25px;">🚌</div>',
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+});
+
+const SCHOOL_MAP_ICON = divIcon({
+  className: "custom-map-marker-icon",
+  html: '<div style="width:42px;height:42px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 2px 8px #0005;display:flex;align-items:center;justify-content:center;font-size:25px;">🏫</div>',
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+});
+
+function getLocalDateString() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 
 // ============================================================
@@ -129,6 +158,9 @@ function getSavedMapView(storageKey, fallbackCenter, fallbackZoom) {
 
 function App() {
 
+  const [overviewPosition, setOverviewPosition] = useState({ x: 16, y: 16 });
+  const overviewDragRef = useRef(null);
+
   // ============================================================
   // BASIC APPLICATION STATE
   // ============================================================
@@ -170,6 +202,21 @@ function App() {
 
   const [travelStatusLoading, setTravelStatusLoading] =
     useState(false);
+
+  // Parent-specific child selection. These IDs come from the
+  // children linked to the currently logged-in parent account.
+  const [parentChildren, setParentChildren] = useState([]);
+
+  const [selectedParentChildId, setSelectedParentChildId] =
+    useState(null);
+
+  const [parentChildrenLoading, setParentChildrenLoading] =
+    useState(false);
+
+  const selectedParentChild =
+    parentChildren.find(
+      (child) => String(child.id) === String(selectedParentChildId)
+    ) || parentChildren[0] || null;
 
 
   // ============================================================
@@ -242,8 +289,8 @@ function App() {
   const [attendanceMessage, setAttendanceMessage] =
     useState("");
 
-  const [attendanceMarked, setAttendanceMarked] =
-    useState({});
+  const attendanceMarkedRef = useRef({});
+  const recognitionInFlightRef = useRef(false);
 
 
   // ============================================================
@@ -277,6 +324,19 @@ function App() {
   const [routes, setRoutes] =
     useState([]);
 
+  const [adminBuses, setAdminBuses] = useState([]);
+  const [adminStops, setAdminStops] = useState([]);
+
+  const [adminOverview, setAdminOverview] = useState({
+    students: 0,
+    buses: 0,
+    drivers: 0,
+    parents: 0,
+    routes: 0,
+    stops: 0,
+    active_trips: 0,
+  });
+
   const [routesLoading, setRoutesLoading] =
     useState(false);
 
@@ -285,6 +345,10 @@ function App() {
 
   const [studentFormOpen, setStudentFormOpen] =
     useState(false);
+
+  const [studentEditOpen, setStudentEditOpen] = useState(false);
+  const [studentEditSaving, setStudentEditSaving] = useState(false);
+  const [studentEditForm, setStudentEditForm] = useState({ id: null, name: "", class_name: "", bus_id: "", pickup_stop_id: "", drop_stop_id: "", has_face: false });
 
   const [studentCreating, setStudentCreating] =
     useState(false);
@@ -322,6 +386,11 @@ function App() {
   // ============================================================
 
   const [tripId, setTripId] = useState(null);
+
+  const [driverTripType, setDriverTripType] = useState("PICKUP");
+  const [driverAssignment, setDriverAssignment] = useState(null);
+  const [driverAssignmentLoading, setDriverAssignmentLoading] = useState(false);
+  const [tripStarting, setTripStarting] = useState(false);
 
   const [tripStatus, setTripStatus] =
     useState("NOT_STARTED");
@@ -400,53 +469,36 @@ function App() {
   // ============================================================
 
   const apiFetch = async (url, options = {}) => {
+    const apiUrl = url.startsWith("http")
+      ? url.replace(
+          /^https?:\/\/[^/]+/,
+         API_BASE_URL
+        )
+      : `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 
-    const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://smart-student-bus-tracker-backend.onrender.com";
-
-const apiUrl = url.startsWith("http")
-  ? url
-  : `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
-
-const response = await fetch(apiUrl, options);
+    const response = await fetch(apiUrl, options);
 
     if (response.status === 401) {
-
-      try {
-
+     try {
         const errorData = await response.clone().json();
+        const message = String(errorData.message || "").toLowerCase();
 
-        const message =
-          String(errorData.message || "").toLowerCase();
-
-        const isExpired =
+       const isExpired =
           message.includes("expired") ||
           message.includes("token") ||
           message.includes("unauthorized");
 
-        if (isExpired) {
-          handleSessionExpired();
-        }
-
-      } catch (error) {
-
-        console.error(
-          "Unable to read authentication error:",
-          error
-        );
-
+       if (isExpired) {
+         handleSessionExpired();
+       }
+     } catch (error) {
+        console.error("Unable to read authentication error:", error);
         handleSessionExpired();
-
-      }
-
+     }
     }
 
     return response;
-
   };
-
-
   // ============================================================
   // SPLASH SCREEN TIMER
   // ============================================================
@@ -599,7 +651,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/notifications",
+          `${API_BASE_URL}/api/notifications`,
           {
             method: "GET",
 
@@ -653,39 +705,113 @@ const response = await fetch(apiUrl, options);
 
 
   // ============================================================
-  // LOAD ATTENDANCE WHEN PARENT OPENS DASHBOARD
+  // LOAD THE CHILDREN LINKED TO THE LOGGED-IN PARENT
+  // ============================================================
+
+  const loadParentChildren = async () => {
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      return;
+    }
+
+    setParentChildrenLoading(true);
+
+    try {
+
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/parents/children`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(
+          data.message || "Unable to load children for this parent"
+        );
+        setParentChildren([]);
+        setSelectedParentChildId(null);
+        return;
+      }
+
+      const children = Array.isArray(data.children)
+        ? data.children
+        : [];
+
+      setParentChildren(children);
+      setSelectedParentChildId((currentId) => {
+        const currentStillLinked = children.some(
+          (child) => String(child.id) === String(currentId)
+        );
+
+        return currentStillLinked
+          ? currentId
+          : (children[0]?.id ?? null);
+      });
+
+    } catch (error) {
+
+      console.error("Parent children loading error:", error);
+      setParentChildren([]);
+      setSelectedParentChildId(null);
+
+    } finally {
+
+      setParentChildrenLoading(false);
+
+    }
+
+  };
+
+
+  // ============================================================
+  // LOAD ATTENDANCE WHEN PARENT OR SELECTED CHILD CHANGES
   // ============================================================
 
   useEffect(() => {
 
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
+    if (selectedRole !== "PARENT_HOME") {
       return;
     }
 
-    loadAttendanceHistory();
+    if (!selectedParentChild?.id) {
+      setAttendanceHistory([]);
+      return;
+    }
+
+    loadAttendanceHistory(selectedParentChild.id);
+
+  }, [selectedRole, selectedParentChild?.id]);
+
+
+  // ============================================================
+  // LOAD PARENT DATA WHEN PARENT LOGS IN
+  // ============================================================
+
+  useEffect(() => {
+
+    if (selectedRole !== "PARENT_HOME") {
+      return;
+    }
+
+    loadParentChildren();
+    loadParentNotifications();
 
   }, [selectedRole]);
 
 
-  // ============================================================
-  // LOAD NOTIFICATIONS WHEN PARENT LOGS IN
-  // ============================================================
-
+  // Poll notifications while a Parent is signed in so pickup/drop events appear automatically.
   useEffect(() => {
-
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
-
-      return;
-
-    }
-
-
-    loadParentNotifications();
-
+    if (selectedRole !== "PARENT_HOME") return;
+    const interval = setInterval(() => loadParentNotifications(), 12000);
+    return () => clearInterval(interval);
   }, [selectedRole]);
 
 
@@ -697,24 +823,32 @@ const response = await fetch(apiUrl, options);
 
     if (
       selectedRole !== "PARENT_HOME" ||
-      selectedMenu !== "calendar"
+      selectedMenu !== "calendar" ||
+      !selectedParentChild?.id
     ) {
       return;
     }
 
-    loadAttendanceHistory();
+    loadAttendanceHistory(selectedParentChild.id);
 
-  }, [selectedRole, selectedMenu]);
+  }, [selectedRole, selectedMenu, selectedParentChild?.id]);
 
 
   // ============================================================
   // LOAD STUDENT ATTENDANCE HISTORY
   // ============================================================
 
-  const loadAttendanceHistory = async () => {
+  const loadAttendanceHistory = async (
+    studentId = selectedParentChild?.id
+  ) => {
 
     const token =
       localStorage.getItem("token");
+
+    if (!studentId) {
+      setAttendanceHistory([]);
+      return;
+    }
 
     if (!token) {
       return;
@@ -726,7 +860,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/attendance/student/1",
+          `${API_BASE_URL}/api/attendance/student/${studentId}`,
           {
             method: "GET",
             headers: {
@@ -895,138 +1029,70 @@ const response = await fetch(apiUrl, options);
   // LOAD LIVE BUS LOCATION
   // ============================================================
 
-  const loadLiveBusLocation = async () => {
-
-    const token =
-      localStorage.getItem("token");
+  const loadLiveBusLocation = async (busId = selectedParentChild?.bus_id) => {
+    const token = localStorage.getItem("token");
 
     if (!token) {
-
       setBusLocation(null);
-
-      setBusLocationStatus(
-        "Please login to view live bus location."
-      );
-
+      setBusLocationStatus("Please login to view live bus location.");
       return;
+    }
 
+    if (!busId) {
+      setBusLocation(null);
+      setBusLocationStatus("No bus is assigned to this child yet. Please contact Admin.");
+      return;
     }
 
     try {
-
-      const response =
-        await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/locations/bus/1/latest",
-          {
-            method: "GET",
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
-
-
-      const data =
-        await response.json();
-
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/locations/bus/${busId}/latest`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
 
       if (!response.ok) {
-
-        console.error(
-          "Live bus location request failed:",
-          data
-        );
-
         setBusLocation(null);
-
-        setBusLocationStatus(
-          data.message ||
-          "Unable to load live bus location."
-        );
-
+        setBusLocationStatus(data.message || "Unable to load live bus location.");
         return;
-
       }
-
 
       if (data.location) {
-
-        setBusLocation(
-          data.location
-        );
-
-        setBusLocationStatus(
-          "LIVE â€¢ Bus location updating"
-        );
-
+        setBusLocation(data.location);
+        setBusLocationStatus("LIVE • Bus location updating");
       } else {
-
         setBusLocation(null);
-
-        setBusLocationStatus(
-          "Bus is not currently on an active trip."
-        );
-
+        setBusLocationStatus("Bus is not currently on an active trip.");
       }
-
     } catch (error) {
-
-      console.error(
-        "Live bus location error:",
-        error
-      );
-
-      setBusLocationStatus(
-        "Unable to connect to live location service."
-      );
-
+      console.error("Live bus location error:", error);
+      setBusLocationStatus("Unable to connect to live location service.");
     }
-
   };
 
 
-  // ============================================================
-  // POLL LIVE BUS LOCATION FOR PARENT / ADMIN
-  // ============================================================
-
+  // Only poll the bus assigned to the selected Parent child.
   useEffect(() => {
-
-    const isTrackingDashboard =
-      selectedRole === "PARENT_HOME" ||
-      selectedRole === "ADMIN_HOME";
-
-
-    if (!isTrackingDashboard) {
-
+    if (selectedRole !== "PARENT_HOME") {
       setBusLocation(null);
-
-      setBusLocationStatus(
-        "Waiting for live bus location"
-      );
-
+      setBusLocationStatus("Waiting for live bus location");
       return;
-
     }
 
+    const busId = selectedParentChild?.bus_id;
+    if (!busId) {
+      setBusLocation(null);
+      setBusLocationStatus("No bus is assigned to this child yet. Please contact Admin.");
+      return;
+    }
 
-    loadLiveBusLocation();
-
-
-    const interval =
-      setInterval(
-        loadLiveBusLocation,
-        3000
-      );
-
-
-    return () => {
-
-      clearInterval(interval);
-
-    };
-
-  }, [selectedRole]);
+    loadLiveBusLocation(busId);
+    const interval = setInterval(() => loadLiveBusLocation(busId), 5000);
+    return () => clearInterval(interval);
+  }, [selectedRole, selectedParentChild?.bus_id]);
 
 
   // ============================================================
@@ -1220,7 +1286,6 @@ const response = await fetch(apiUrl, options);
 
     }
 
-
     try {
 
       const token =
@@ -1236,7 +1301,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/face/detect",
+          `${API_BASE_URL}/api/face/detect`,
           {
 
             method: "POST",
@@ -1336,7 +1401,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/attendance/mark",
+          `${API_BASE_URL}/api/attendance/mark`,
           {
 
             method: "POST",
@@ -1361,6 +1426,9 @@ const response = await fetch(apiUrl, options);
 
               confidence:
                 confidence,
+
+              latitude: driverLocation?.latitude ?? null,
+              longitude: driverLocation?.longitude ?? null,
 
             }),
 
@@ -1418,6 +1486,8 @@ const response = await fetch(apiUrl, options);
 
   const recognizeFace = async () => {
 
+    if (recognitionInFlightRef.current) return;
+
     if (!videoRef.current) {
 
       return;
@@ -1442,6 +1512,7 @@ const response = await fetch(apiUrl, options);
 
     }
 
+    recognitionInFlightRef.current = true;
 
     try {
 
@@ -1458,7 +1529,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/face/recognize",
+          `${API_BASE_URL}/api/face/recognize`,
           {
 
             method: "POST",
@@ -1502,10 +1573,10 @@ const response = await fetch(apiUrl, options);
       const faces =
         data.faces || [];
 
-
-      setRecognizedFaces(
-        faces
-      );
+      // Recognition response already includes each face bounding box.
+      // Reuse it instead of running a second, separate detection inference.
+      setDetectedFaces(faces);
+      setRecognizedFaces(faces);
 
 
       const recognizedStudent =
@@ -1526,9 +1597,7 @@ const response = await fetch(apiUrl, options);
         recognizedStudent.student_id;
 
 
-      if (
-        attendanceMarked[studentId]
-      ) {
+      if (attendanceMarkedRef.current[studentId]) {
 
         return;
 
@@ -1544,15 +1613,7 @@ const response = await fetch(apiUrl, options);
 
       if (success) {
 
-        setAttendanceMarked(
-          (previous) => ({
-
-            ...previous,
-
-            [studentId]: true,
-
-          })
-        );
+        attendanceMarkedRef.current[studentId] = true;
 
       }
 
@@ -1563,6 +1624,8 @@ const response = await fetch(apiUrl, options);
         error
       );
 
+    } finally {
+      recognitionInFlightRef.current = false;
     }
 
   };
@@ -1586,14 +1649,14 @@ const response = await fetch(apiUrl, options);
 
     const interval =
       setInterval(() => {
-
-        detectFace();
-
         if (selectedRole === "DRIVER_HOME") {
+          // One recognition request returns both the face box and identity.
           recognizeFace();
+        } else {
+          // Admin face registration needs detection boxes only.
+          detectFace();
         }
-
-      }, 1000);
+      }, 1200);
 
 
     return () => {
@@ -1688,7 +1751,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/face-registration/${selectedStudentId}`,
+          `${API_BASE_URL}/api/face-registration/${selectedStudentId}`,
           {
 
             method: "POST",
@@ -1729,11 +1792,9 @@ const response = await fetch(apiUrl, options);
       }
 
 
-      setAttendanceMarked({});
-
 
       setRegistrationStatus(
-        `âœ“ Face registered successfully for ${data.student.name}`
+        `✓ Face registered successfully for ${data.student.name}`
       );
 
 
@@ -1777,7 +1838,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/students",
+          `${API_BASE_URL}/api/students`,
           {
             method: "GET",
             headers: {
@@ -1843,7 +1904,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/routes",
+          `${API_BASE_URL}/api/admin/routes`,
           {
             method: "GET",
 
@@ -1887,6 +1948,111 @@ const response = await fetch(apiUrl, options);
   };
 
 
+  const loadAdminStops = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/stops`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to load stops.");
+      setAdminStops(data.stops || []);
+    } catch (error) {
+      console.error("Admin stops loading error:", error);
+      setStudentCreateMessage(error.message || "Unable to load stops.");
+    }
+  };
+
+
+  const loadAdminBuses = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/admin/buses`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to load buses.");
+      setAdminBuses(data.buses || []);
+    } catch (error) {
+      console.error("Admin buses loading error:", error);
+      setStudentCreateMessage(error.message || "Unable to load buses.");
+    }
+  };
+
+
+  const assignStudentBus = async (studentId, rawBusId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/students/${studentId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bus_id: rawBusId ? Number(rawBusId) : null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to assign bus.");
+      setStudentCreateMessage(data.message || "Student bus assignment updated.");
+      await loadStudents();
+    } catch (error) {
+      console.error("Student bus assignment error:", error);
+      setStudentCreateMessage(error.message || "Unable to assign bus.");
+      await loadStudents();
+    }
+  };
+
+
+  const openStudentEdit = (student) => {
+    setStudentEditForm({
+      id: student.id,
+      name: student.name || "",
+      class_name: student.class_name || "",
+      bus_id: student.bus_id ?? "",
+      pickup_stop_id: student.pickup_stop_id ?? "",
+      drop_stop_id: student.drop_stop_id ?? "",
+      has_face: Boolean(student.has_face),
+    });
+    setStudentEditOpen(true);
+    loadAdminStops();
+    loadAdminBuses();
+  };
+
+  const saveStudentEdit = async (event) => {
+    event.preventDefault();
+    const token = localStorage.getItem("token");
+    if (!token || !studentEditForm.id) return;
+    setStudentEditSaving(true);
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/students/${studentEditForm.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: studentEditForm.name.trim(),
+          class_name: studentEditForm.class_name.trim(),
+          bus_id: studentEditForm.bus_id === "" ? null : Number(studentEditForm.bus_id),
+          pickup_stop_id: studentEditForm.pickup_stop_id === "" ? null : Number(studentEditForm.pickup_stop_id),
+          drop_stop_id: studentEditForm.drop_stop_id === "" ? null : Number(studentEditForm.drop_stop_id),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to update student.");
+      setStudentEditOpen(false);
+      setStudentCreateMessage(data.message || "Student updated successfully.");
+      await loadStudents();
+    } catch (error) {
+      setStudentCreateMessage(error.message || "Unable to update student.");
+    } finally {
+      setStudentEditSaving(false);
+    }
+  };
+
+
   const resetStudentForm = () => {
 
     setStudentForm({
@@ -1898,6 +2064,8 @@ const response = await fetch(apiUrl, options);
       email: "",
       parent_username: "",
       parent_password: "",
+      pickup_stop_id: "",
+      drop_stop_id: "",
     });
 
     setStudentCreateMessage("");
@@ -1990,7 +2158,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/students",
+          `${API_BASE_URL}/api/students`,
           {
             method: "POST",
 
@@ -2002,9 +2170,11 @@ const response = await fetch(apiUrl, options);
                 `Bearer ${token}`,
             },
 
-            body: JSON.stringify(
-              studentForm
-            ),
+            body: JSON.stringify({
+              ...studentForm,
+              pickup_stop_id: studentForm.pickup_stop_id ? Number(studentForm.pickup_stop_id) : null,
+              drop_stop_id: studentForm.drop_stop_id ? Number(studentForm.drop_stop_id) : null,
+            }),
           }
         );
 
@@ -2066,6 +2236,8 @@ const response = await fetch(apiUrl, options);
         email: "",
         parent_username: "",
         parent_password: "",
+        pickup_stop_id: "",
+        drop_stop_id: "",
       });
 
     } catch (error) {
@@ -2135,7 +2307,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/students/${student.id}`,
+          `${API_BASE_URL}/api/students/${student.id}`,
           {
             method: "DELETE",
             headers: {
@@ -2232,9 +2404,8 @@ const response = await fetch(apiUrl, options);
       selectedMenu === "student-management" ||
       selectedMenu === "students"
     ) {
-
       loadStudents();
-
+      loadAdminBuses();
     }
 
     if (
@@ -2245,7 +2416,54 @@ const response = await fetch(apiUrl, options);
 
     }
 
+    if (selectedMenu === null) {
+      loadStudents();
+      loadRoutes();
+      loadAdminBuses();
+    }
+
   }, [selectedRole, selectedMenu]);
+
+
+  // Load real Admin counters rather than displaying fixed sample numbers.
+  useEffect(() => {
+    if (selectedRole !== "ADMIN_HOME") {
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdminOverview = async () => {
+      try {
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/admin/overview`,
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && !cancelled) {
+          setAdminOverview(data.counts || {});
+        }
+      } catch (error) {
+        console.error("Admin overview loading error:", error);
+      }
+    };
+
+    loadAdminOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRole]);
 
 
   // ============================================================
@@ -2269,7 +2487,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/auth/login",
+          `${API_BASE_URL}/api/auth/login`,
           {
 
             method: "POST",
@@ -2403,13 +2621,20 @@ const response = await fetch(apiUrl, options);
     setSelectedMenu(null);
     setSelectedRole(null);
 
-    setAttendanceMarked({});
+    attendanceMarkedRef.current = {};
     setAttendanceMessage("");
     setNotifications([]);
     setUnreadNotificationCount(0);
+    setParentChildren([]);
+    setSelectedParentChildId(null);
+    setAttendanceHistory([]);
+    setTravelStatus(null);
 
     setTripId(null);
     setTripStatus("NOT_STARTED");
+    setDriverAssignment(null);
+    setDriverTripType("PICKUP");
+    setTodayTravelStudents([]);
 
     setDriverLocation(null);
     setBusLocation(null);
@@ -2467,7 +2692,7 @@ const response = await fetch(apiUrl, options);
 
         const response =
           await apiFetch(
-            `https://smart-student-bus-tracker-backend.onrender.com/api/notifications/${notificationId}/read`,
+            `${API_BASE_URL}/api/notifications/${notificationId}/read`,
             {
 
               method: "PUT",
@@ -2517,10 +2742,17 @@ const response = await fetch(apiUrl, options);
   // TRAVEL STATUS
   // ============================================================
 
-  const loadTravelStatus = async () => {
+  const loadTravelStatus = async (
+    studentId = selectedParentChild?.id
+  ) => {
 
     const token =
       localStorage.getItem("token");
+
+    if (!studentId) {
+      setTravelStatus(null);
+      return;
+    }
 
     if (!token) {
       return;
@@ -2528,16 +2760,13 @@ const response = await fetch(apiUrl, options);
 
     setTravelStatusLoading(true);
 
-    const travelDate =
-      new Date()
-        .toISOString()
-        .split("T")[0];
+    const travelDate = getLocalDateString();
 
     try {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/status/1?travel_date=${travelDate}`,
+          `${API_BASE_URL}/api/travel/status/${studentId}?travel_date=${travelDate}`,
           {
             method: "GET",
 
@@ -2589,22 +2818,24 @@ const response = await fetch(apiUrl, options);
           "token"
         );
 
+      const studentId = selectedParentChild?.id;
+
       if (!token) {
         return;
       }
 
-      setTravelStatus(status);
+      if (!studentId) {
+        alert("No child is linked to this parent account. Please contact the administrator.");
+        return;
+      }
 
-      const travelDate =
-        new Date()
-          .toISOString()
-          .split("T")[0];
+      const travelDate = getLocalDateString();
 
       try {
 
         const response =
           await apiFetch(
-            "https://smart-student-bus-tracker-backend.onrender.com/api/travel/status",
+            `${API_BASE_URL}/api/travel/status`,
             {
               method: "POST",
 
@@ -2617,7 +2848,7 @@ const response = await fetch(apiUrl, options);
               },
 
               body: JSON.stringify({
-                student_id: 1,
+                student_id: studentId,
                 status: status,
                 travel_date: travelDate,
               }),
@@ -2628,8 +2859,6 @@ const response = await fetch(apiUrl, options);
           await response.json();
 
         if (!response.ok) {
-
-          setTravelStatus(null);
 
           alert(
             data.message ||
@@ -2650,8 +2879,6 @@ const response = await fetch(apiUrl, options);
           error
         );
 
-        setTravelStatus(null);
-
         alert(
           "Unable to connect to backend."
         );
@@ -2661,18 +2888,46 @@ const response = await fetch(apiUrl, options);
     };
 
 
-  // Load today's travel status when Parent Dashboard opens.
+  // Load travel status for the child linked to this parent.
   useEffect(() => {
 
-    if (
-      selectedRole !== "PARENT_HOME"
-    ) {
+    if (selectedRole !== "PARENT_HOME") {
       return;
     }
 
-    loadTravelStatus();
+    if (!selectedParentChild?.id) {
+      setTravelStatus(null);
+      return;
+    }
 
-  }, [selectedRole]);
+    loadTravelStatus(selectedParentChild.id);
+
+  }, [selectedRole, selectedParentChild?.id]);
+
+
+  const loadDriverAssignment = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setDriverAssignmentLoading(true);
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/drivers/assignment`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setDriverAssignment(null);
+        throw new Error(data.message || "No bus assignment found for this Driver.");
+      }
+      setDriverAssignment(data);
+    } catch (error) {
+      console.error("Driver assignment loading error:", error);
+      setDriverAssignment(null);
+      setAttendanceMessage(error.message || "Unable to load assigned route.");
+    } finally {
+      setDriverAssignmentLoading(false);
+    }
+  };
 
 
   // ============================================================
@@ -2690,16 +2945,13 @@ const response = await fetch(apiUrl, options);
 
     setTravelStudentsLoading(true);
 
-    const travelDate =
-      new Date()
-        .toISOString()
-        .split("T")[0];
+    const travelDate = getLocalDateString();
 
     try {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/today?travel_date=${travelDate}`,
+          `${API_BASE_URL}/api/travel/today?travel_date=${travelDate}`,
           {
             method: "GET",
             headers: {
@@ -2770,6 +3022,7 @@ const response = await fetch(apiUrl, options);
       return;
     }
 
+    loadDriverAssignment();
     loadTodayTravelStudents();
 
   }, [selectedRole]);
@@ -2847,7 +3100,7 @@ const response = await fetch(apiUrl, options);
     });
 
     setGpsStatus(
-      `GPS LIVE â€¢ Accuracy Â±${Math.round(accuracy)} m`
+      `GPS LIVE • Accuracy ±${Math.round(accuracy)} m`
     );
 
     // Limit backend writes to roughly one every 3 seconds.
@@ -2865,7 +3118,7 @@ const response = await fetch(apiUrl, options);
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/locations",
+          `${API_BASE_URL}/api/locations`,
           {
 
             method: "POST",
@@ -2928,7 +3181,7 @@ const response = await fetch(apiUrl, options);
       );
 
       setGpsStatus(
-        `GPS LIVE â€¢ Â±${Math.round(accuracy)} m â€¢ uploaded`
+        `GPS LIVE • ±${Math.round(accuracy)} m • uploaded`
       );
 
     } catch (error) {
@@ -2962,7 +3215,7 @@ const response = await fetch(apiUrl, options);
     try {
 
       const response = await apiFetch(
-        "https://smart-student-bus-tracker-backend.onrender.com/api/trips/active",
+        `${API_BASE_URL}/api/trips/active`,
         {
           method: "GET",
           headers: {
@@ -2992,6 +3245,7 @@ const response = await fetch(apiUrl, options);
         setTripId(activeTripId);
         activeTripIdRef.current = activeTripId;
         setTripStatus("IN_PROGRESS");
+        setDriverTripType(data.trip.trip_type || "PICKUP");
 
         setAttendanceMessage(
           "Active trip restored after refresh."
@@ -3182,168 +3436,112 @@ const response = await fetch(apiUrl, options);
 
 
   // ============================================================
-  // START TRIP
+  // START PICKUP / DROP TRIP
+  // The backend resolves the driver's assigned bus and route.
+  // Do not send IDs from stale frontend state.
   // ============================================================
 
-  const startTrip =
-    async () => {
+  const startTrip = async () => {
+    const token = localStorage.getItem("token");
 
-      const token =
-        localStorage.getItem(
-          "token"
-        );
+    if (!token) {
+      alert("Your session has ended. Please log in again.");
+      return;
+    }
 
+    if (tripStarting) return;
 
-      if (!token) {
+    if (tripStatus === "IN_PROGRESS") {
+      alert("A trip is already in progress. Stop it before starting another trip.");
+      return;
+    }
 
-        alert(
-          "Please login first."
-        );
+    // The current Flask trip endpoint requires all three fields.
+    // Use the IDs returned by /api/drivers/assignment, never hard-coded IDs.
+    const busId = Number(driverAssignment?.bus?.id);
+    const routeId = Number(driverAssignment?.route?.id);
+    const tripType = String(driverTripType || "PICKUP").toUpperCase();
 
+    if (!Number.isInteger(busId) || busId <= 0) {
+      const message = "No active bus is assigned to your Driver account. Ask Admin to assign a bus, then refresh your assignment.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    if (!Number.isInteger(routeId) || routeId <= 0) {
+      const message = `Bus ${driverAssignment?.bus?.bus_number || "assigned to you"} has no active route. Admin must assign a route to this bus before you can start a ${tripType.toLowerCase()} trip.`;
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    if (!["PICKUP", "DROP"].includes(tripType)) {
+      const message = "Choose Pickup or Drop before starting the trip.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    setTripStarting(true);
+    setAttendanceMessage(`Starting ${tripType.toLowerCase()} trip…`);
+
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/trips/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bus_id: busId,
+          route_id: routeId,
+          trip_type: tripType,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message = data.message || data.error || `Unable to start trip (${response.status}).`;
+        setAttendanceMessage(`Trip not started: ${message}`);
+        alert(message);
+
+        // A previous trip may already be active (for example after a refresh).
+        if (response.status === 409 && data.trip_id) {
+          await restoreActiveTrip();
+        }
         return;
-
       }
 
-
-      try {
-
-        const response =
-          await apiFetch(
-            "https://smart-student-bus-tracker-backend.onrender.com/api/trips/start",
-            {
-
-              method: "POST",
-
-              headers: {
-
-                "Content-Type":
-                  "application/json",
-
-                Authorization:
-                  `Bearer ${token}`,
-
-              },
-
-              body: JSON.stringify({
-
-                bus_id: 1,
-
-                route_id: 1,
-
-                trip_type:
-                  "PICKUP",
-
-              }),
-
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          alert(
-            data.message ||
-            "Unable to start trip"
-          );
-
-          return;
-
-        }
-
-
-        /*
-         * Get the actual trip ID returned
-         * from Flask.
-         */
-
-        const newTripId =
-          data.trip_id ||
-          data.trip?.id ||
-          data.id ||
-          null;
-
-
-        if (!newTripId) {
-
-          console.error(
-            "Trip API response:",
-            data
-          );
-
-
-          alert(
-            "Trip started, but the backend did not return a trip ID."
-          );
-
-          return;
-
-        }
-
-
-        /*
-         * IMPORTANT:
-         *
-         * Store the trip ID in both React state
-         * and the ref.
-         */
-
-        setTripId(
-          newTripId
-        );
-
-
-        activeTripIdRef.current =
-          newTripId;
-
-
-        setTripStatus(
-          "IN_PROGRESS"
-        );
-
-
-        setAttendanceMarked({});
-
-
-        setAttendanceMessage(
-          "Trip started successfully."
-        );
-
-
-        /*
-         * Immediately start GPS using newTripId.
-         *
-         * We do NOT wait for React's setTripId().
-         */
-
-        startDriverGPS(
-          newTripId
-        );
-
-
-        alert(
-          `Trip started successfully!\nTrip ID: ${newTripId}\nGPS starting...`
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "Start trip error:",
-          error
-        );
-
-
-        alert(
-          "Unable to connect to backend."
-        );
-
+      const newTripId = data.trip_id || data.trip?.id || data.id || null;
+      if (!newTripId) {
+        const message = data.message || "The server did not return a trip ID.";
+        setAttendanceMessage(`Trip not started: ${message}`);
+        alert(message);
+        return;
       }
 
-    };
+      setTripId(newTripId);
+      activeTripIdRef.current = newTripId;
+      setTripStatus("IN_PROGRESS");
+      setDriverTripType(data.trip_type || tripType);
+      attendanceMarkedRef.current = {};
+      setAttendanceMessage(`${data.trip_type || tripType} trip started. GPS is starting.`);
+
+      // A trip is successfully created even if the browser later denies GPS.
+      startDriverGPS(newTripId);
+      loadTodayTravelStudents();
+      alert(`${data.trip_type || tripType} trip started successfully. Trip ID: ${newTripId}`);
+    } catch (error) {
+      console.error("Start trip error:", error);
+      const message = error?.message || "Could not reach the backend. Check that Flask is running on port 5000.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+    } finally {
+      setTripStarting(false);
+    }
+  };
 
 
   // ============================================================
@@ -3390,7 +3588,7 @@ const response = await fetch(apiUrl, options);
 
         const response =
           await apiFetch(
-            `https://smart-student-bus-tracker-backend.onrender.com/api/trips/${activeTripId}/stop`,
+            `${API_BASE_URL}/api/trips/${activeTripId}/stop`,
             {
 
               method: "POST",
@@ -3432,6 +3630,7 @@ const response = await fetch(apiUrl, options);
         setTripStatus(
           "COMPLETED"
         );
+        loadTodayTravelStudents();
 
 
         setGpsStatus(
@@ -3479,7 +3678,7 @@ const response = await fetch(apiUrl, options);
         <div className="splash-content">
 
           <div className="splash-icon">
-            ðŸšŒ
+            🚌
           </div>
 
 
@@ -3518,7 +3717,7 @@ const response = await fetch(apiUrl, options);
           <div className="brand-section">
 
             <div className="brand-icon">
-              ðŸšŒ
+              🚌
             </div>
 
 
@@ -3548,7 +3747,7 @@ const response = await fetch(apiUrl, options);
             >
 
               <span className="role-icon">
-                ðŸ‘¨â€ðŸ‘©â€ðŸ‘§
+                👨‍👩‍👧
               </span>
 
 
@@ -3567,7 +3766,7 @@ const response = await fetch(apiUrl, options);
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3583,7 +3782,7 @@ const response = await fetch(apiUrl, options);
             >
 
               <span className="role-icon">
-                ðŸšŒ
+                🚌
               </span>
 
 
@@ -3602,7 +3801,7 @@ const response = await fetch(apiUrl, options);
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3618,7 +3817,7 @@ const response = await fetch(apiUrl, options);
             >
 
               <span className="role-icon">
-                ðŸ› ï¸
+                🛠️
               </span>
 
 
@@ -3637,7 +3836,7 @@ const response = await fetch(apiUrl, options);
 
 
               <span className="role-arrow">
-                â†’
+                →
               </span>
 
             </button>
@@ -3670,7 +3869,7 @@ const response = await fetch(apiUrl, options);
       "Login";
 
     let roleIcon =
-      "ðŸ”";
+      "🔐";
 
 
     if (
@@ -3682,7 +3881,7 @@ const response = await fetch(apiUrl, options);
         "Parent Login";
 
       roleIcon =
-        "ðŸ‘¨â€ðŸ‘©â€ðŸ‘§";
+        "👨‍👩‍👧";
 
     }
 
@@ -3696,7 +3895,7 @@ const response = await fetch(apiUrl, options);
         "Driver Login";
 
       roleIcon =
-        "ðŸšŒ";
+        "🚌";
 
     }
 
@@ -3710,7 +3909,7 @@ const response = await fetch(apiUrl, options);
         "Admin Login";
 
       roleIcon =
-        "ðŸ› ï¸";
+        "🛠️";
 
     }
 
@@ -3735,7 +3934,7 @@ const response = await fetch(apiUrl, options);
 
             }}
           >
-            â† Back
+            ← Back
           </button>
 
 
@@ -3830,7 +4029,7 @@ const response = await fetch(apiUrl, options);
 
         <header className="admin-style-header">
           <div className="admin-style-brand">
-            <div className="admin-style-logo">ðŸšŒ</div>
+            <div className="admin-style-logo">🚌</div>
             <div>
               <p>Smart Student Bus</p>
               <h1>Parent</h1>
@@ -3846,7 +4045,7 @@ const response = await fetch(apiUrl, options);
               }}
               title="Notifications"
             >
-              ðŸ””
+              🔔
               {unreadNotificationCount > 0 && (
                 <span className="notification-dot"></span>
               )}
@@ -3859,7 +4058,7 @@ const response = await fetch(apiUrl, options);
             >
               <span className="header-avatar">P</span>
               <span className="header-role-text">Parent</span>
-              <span className="header-chevron">âŒ„</span>
+              <span className="header-chevron">⌄</span>
             </button>
           </div>
         </header>
@@ -3868,7 +4067,7 @@ const response = await fetch(apiUrl, options);
 
           <section className="admin-style-map-panel">
             <div className="admin-style-map-title">
-              <span className="admin-style-map-title-icon">ðŸ“</span>
+              <span className="admin-style-map-title-icon">📍</span>
               <div>
                 <strong>Live Bus Tracking</strong>
                 <small>Track your child's bus in real time</small>
@@ -3891,14 +4090,17 @@ const response = await fetch(apiUrl, options);
                 storageKey="smart-student-parent-map-view"
               />
 
+              {busLocation && <LiveLocationView location={busLocation} />}
+
               <Marker
+                icon={SCHOOL_MAP_ICON}
                 position={[
                   17.289612892928957,
                   76.86886054620065,
                 ]}
               >
                 <Popup>
-                  <strong>ðŸ« Shetty Institute of Technology</strong>
+                  <strong>🏫 Shetty Institute of Technology</strong>
                   <br />
                   School
                 </Popup>
@@ -3906,15 +4108,16 @@ const response = await fetch(apiUrl, options);
 
               {busLocation && (
                 <Marker
+                  icon={BUS_MAP_ICON}
                   position={[
                     busLocation.latitude,
                     busLocation.longitude,
                   ]}
                 >
                   <Popup>
-                    <strong>ðŸšŒ BUS001</strong>
+                    <strong>🚌 {driverAssignment?.bus?.bus_number || "Assigned bus"}</strong>
                     <br />
-                    Mahantesh's school bus
+                    {selectedParentChild?.name || "Your child's"} school bus
                     <br />
                     Live location
                     <br />
@@ -3925,9 +4128,9 @@ const response = await fetch(apiUrl, options);
             </MapContainer>
 
             <div className="admin-style-floating-bus">
-              <div className="admin-style-bus-icon">ðŸšŒ</div>
+              <div className="admin-style-bus-icon">🚌</div>
               <div>
-                <strong>BUS001</strong>
+                <strong>{selectedParentChild?.bus?.bus_number || "Bus not assigned"}</strong>
                 <span>{busLocationStatus}</span>
               </div>
               <span className={busLocation ? "live-pill live" : "live-pill"}>
@@ -3938,7 +4141,7 @@ const response = await fetch(apiUrl, options);
 
           <aside className="admin-style-dashboard-panel">
             <div className="admin-style-panel-heading">
-              <div className="admin-style-panel-icon">ðŸšŒ</div>
+              <div className="admin-style-panel-icon">🚌</div>
               <div>
                 <p>SMART STUDENT BUS</p>
                 <h2>Parent Dashboard</h2>
@@ -3947,15 +4150,41 @@ const response = await fetch(apiUrl, options);
 
             <div className="admin-style-welcome">
               <p>WELCOME</p>
-              <h2>Welcome, Parent ðŸ‘‹</h2>
+              <h2>Welcome, Parent 👋</h2>
               <span>Track your child and stay updated.</span>
             </div>
 
             <div className="admin-style-child-card">
-              <div className="admin-style-child-avatar">ðŸ‘¨â€ðŸŽ“</div>
+              <div className="admin-style-child-avatar">👨‍🎓</div>
               <div>
-                <strong>Mahantesh</strong>
-                <span>STU001</span>
+                <strong>
+                  {selectedParentChild?.name || (
+                    parentChildrenLoading ? "Loading child..." : "No child linked"
+                  )}
+                </strong>
+                <span>
+                  {selectedParentChild?.student_code || (
+                    !parentChildrenLoading && parentChildren.length === 0
+                      ? "Please contact the administrator"
+                      : ""
+                  )}
+                </span>
+                {parentChildren.length > 1 && (
+                  <select
+                    aria-label="Select child"
+                    value={selectedParentChild?.id ?? ""}
+                    onChange={(event) => {
+                      setSelectedParentChildId(event.target.value);
+                    }}
+                    style={{ marginTop: "6px", maxWidth: "100%" }}
+                  >
+                    {parentChildren.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name} ({child.student_code || `ID ${child.id}`})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <span
                 className={
@@ -3966,7 +4195,7 @@ const response = await fetch(apiUrl, options);
                       : "dashboard-status"
                 }
               >
-                â— {travelStatus === "COMING"
+                {travelStatus === "COMING"
                   ? "COMING"
                   : travelStatus === "NOT_COMING"
                     ? "NOT COMING"
@@ -3977,7 +4206,7 @@ const response = await fetch(apiUrl, options);
             <div className="admin-style-detail-list">
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“…</span>
+                <span>📅</span>
                 <div>
                   <strong>Today's Status</strong>
                   <small>
@@ -3991,34 +4220,34 @@ const response = await fetch(apiUrl, options);
                     <button
                       className={travelStatus === "COMING" ? "selected" : ""}
                       onClick={() => updateTravelStatus("COMING")}
-                      disabled={travelStatusLoading}
+                      disabled={travelStatusLoading || !selectedParentChild}
                     >
-                      ðŸšŒ Coming
+                      🚌 Coming
                     </button>
                     <button
                       className={travelStatus === "NOT_COMING" ? "selected" : ""}
                       onClick={() => updateTravelStatus("NOT_COMING")}
-                      disabled={travelStatusLoading}
+                      disabled={travelStatusLoading || !selectedParentChild}
                     >
-                      ðŸš« Not Coming
+                      🚫 Not Coming
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <div>
                   <strong>Pickup Time</strong>
-                  <small>07:45 AM</small>
+                  <small>{selectedParentChild?.pickup_stop?.scheduled_time || "Not scheduled"}</small>
                 </div>
               </div>
 
               <div className="admin-style-detail-card">
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <div>
                   <strong>Drop Time</strong>
-                  <small>03:30 PM</small>
+                  <small>{selectedParentChild?.drop_stop?.scheduled_time || "Not scheduled"}</small>
                 </div>
               </div>
 
@@ -4042,9 +4271,9 @@ const response = await fetch(apiUrl, options);
 
             <div className="admin-style-quick-list">
               <button onClick={() => setSelectedMenu("bus-schedule")}>
-                <span>ðŸšŒ</span>
+                <span>🚌</span>
                 <strong>Bus Schedule</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4053,9 +4282,9 @@ const response = await fetch(apiUrl, options);
                   loadAttendanceHistory();
                 }}
               >
-                <span>ðŸ“…</span>
+                <span>📅</span>
                 <strong>Attendance Calendar</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4064,15 +4293,15 @@ const response = await fetch(apiUrl, options);
                   loadParentNotifications();
                 }}
               >
-                <span>ðŸ””</span>
+                <span>🔔</span>
                 <strong>Notifications</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button onClick={() => setSelectedMenu("my-profile")}>
-                <span>ðŸ‘¤</span>
+                <span>👤</span>
                 <strong>My Profile</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
             </div>
           </aside>
@@ -4084,7 +4313,7 @@ const response = await fetch(apiUrl, options);
             className={!selectedMenu ? "active" : ""}
             onClick={() => setSelectedMenu(null)}
           >
-            <span>ðŸ </span>
+            <span>🏠</span>
             <small>Home</small>
           </button>
 
@@ -4092,7 +4321,7 @@ const response = await fetch(apiUrl, options);
             className={selectedMenu === "bus-schedule" ? "active" : ""}
             onClick={() => setSelectedMenu("bus-schedule")}
           >
-            <span>ðŸšŒ</span>
+            <span>🚌</span>
             <small>Bus</small>
           </button>
 
@@ -4103,7 +4332,7 @@ const response = await fetch(apiUrl, options);
               loadAttendanceHistory();
             }}
           >
-            <span>ðŸ“…</span>
+            <span>📅</span>
             <small>Calendar</small>
           </button>
 
@@ -4114,7 +4343,7 @@ const response = await fetch(apiUrl, options);
               loadParentNotifications();
             }}
           >
-            <span>ðŸ””</span>
+            <span>🔔</span>
             <small>Notifications</small>
           </button>
 
@@ -4122,7 +4351,7 @@ const response = await fetch(apiUrl, options);
             className={selectedMenu === "my-profile" ? "active" : ""}
             onClick={() => setSelectedMenu("my-profile")}
           >
-            <span>ðŸ‘¤</span>
+            <span>👤</span>
             <small>Profile</small>
           </button>
         </nav>
@@ -4139,7 +4368,7 @@ const response = await fetch(apiUrl, options);
 
               }}
             >
-              Ã—
+              ×
             </button>
 
 
@@ -4149,12 +4378,12 @@ const response = await fetch(apiUrl, options);
               <>
 
                 <h2>
-                  ðŸšŒ Bus Information
+                  🚌 Bus Information
                 </h2>
 
 
                 <p>
-                  Bus: <strong>BUS001</strong>
+                  Bus: <strong>{selectedParentChild?.bus?.bus_number || "Not assigned"}</strong>
                 </p>
 
 
@@ -4162,7 +4391,7 @@ const response = await fetch(apiUrl, options);
                   Driver:
                   {" "}
                   <strong>
-                    Ramesh Kumar
+                    {selectedParentChild?.bus?.driver_name || "Not assigned"}
                   </strong>
                 </p>
 
@@ -4171,7 +4400,7 @@ const response = await fetch(apiUrl, options);
                   Route:
                   {" "}
                   <strong>
-                    Main School Route
+                    {selectedParentChild?.bus?.route_name || "Not assigned"}
                   </strong>
                 </p>
 
@@ -4214,7 +4443,7 @@ const response = await fetch(apiUrl, options);
                       cursor: "pointer",
                     }}
                   >
-                    â†
+                    ←
                   </button>
 
                   <div
@@ -4224,7 +4453,7 @@ const response = await fetch(apiUrl, options);
                     }}
                   >
                     <h2 style={{ margin: 0 }}>
-                      ðŸ“… Attendance Calendar
+                      📅 Attendance Calendar
                     </h2>
 
                     <strong>
@@ -4248,7 +4477,7 @@ const response = await fetch(apiUrl, options);
                       cursor: "pointer",
                     }}
                   >
-                    â†’
+                    →
                   </button>
 
                 </div>
@@ -4291,7 +4520,7 @@ const response = await fetch(apiUrl, options);
                   >
                     {attendanceHistoryLoading
                       ? "Refreshing..."
-                      : "â†» Refresh"}
+                      : "→» Refresh"}
                   </button>
 
                 </div>
@@ -4413,8 +4642,8 @@ const response = await fetch(apiUrl, options);
                                 }}
                               >
                                 {came
-                                  ? "ðŸŸ¢ Came to Bus"
-                                  : "âšª No record"}
+                                  ? "🟢 Came to Bus"
+                                  : "⚪ No record"}
                               </div>
 
                             </div>
@@ -4433,8 +4662,8 @@ const response = await fetch(apiUrl, options);
                         fontSize: "13px",
                       }}
                     >
-                      <div>ðŸŸ¢ Came to Bus</div>
-                      <div>âšª No attendance record</div>
+                      <div>🟢 Came to Bus</div>
+                      <div>⚪ No attendance record</div>
                     </div>
 
                   </>
@@ -4452,7 +4681,7 @@ const response = await fetch(apiUrl, options);
               <>
 
                 <h2>
-                  ðŸ”” Notifications
+                  🔔 Notifications
                 </h2>
 
 
@@ -4532,7 +4761,7 @@ const response = await fetch(apiUrl, options);
               <>
 
                 <h2>
-                  ðŸ‘¤ My Profile
+                  👤 My Profile
                 </h2>
 
 
@@ -4595,7 +4824,7 @@ const response = await fetch(apiUrl, options);
 
         <header className="admin-style-header">
           <div className="admin-style-brand">
-            <div className="admin-style-logo">ðŸšŒ</div>
+            <div className="admin-style-logo">🚌</div>
             <div>
               <p>Smart Student Bus</p>
               <h1>Driver</h1>
@@ -4608,7 +4837,7 @@ const response = await fetch(apiUrl, options);
               onClick={() => setSelectedMenu("alerts")}
               title="Alerts"
             >
-              ðŸ””
+              🔔
             </button>
 
             <button
@@ -4618,7 +4847,25 @@ const response = await fetch(apiUrl, options);
             >
               <span className="header-avatar">D</span>
               <span className="header-role-text">Driver</span>
-              <span className="header-chevron">âŒ„</span>
+              <span className="header-chevron">⌄</span>
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              title="Logout"
+              aria-label="Logout"
+              style={{
+                border: "1px solid #d7dee8",
+                borderRadius: "10px",
+                background: "#ffffff",
+                color: "#b42318",
+                padding: "10px 14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ↪ Logout
             </button>
           </div>
         </header>
@@ -4627,7 +4874,7 @@ const response = await fetch(apiUrl, options);
 
           <section className="admin-style-map-panel">
             <div className="admin-style-map-title">
-              <span className="admin-style-map-title-icon">ðŸ“</span>
+              <span className="admin-style-map-title-icon">📍</span>
               <div>
                 <strong>Live Bus Location</strong>
                 <small>Your current location in real time</small>
@@ -4635,50 +4882,59 @@ const response = await fetch(apiUrl, options);
             </div>
 
             <div className="admin-style-driver-map">
-              {driverLocation ? (
+              {(driverLocation || driverAssignment?.stops?.length > 0) ? (
                 <MapContainer
-                  center={[
-                    driverLocation.latitude,
-                    driverLocation.longitude,
-                  ]}
-                  zoom={16}
+                  center={driverLocation
+                    ? [driverLocation.latitude, driverLocation.longitude]
+                    : [Number(driverAssignment.stops[0].latitude), Number(driverAssignment.stops[0].longitude)]}
+                  zoom={15}
                   className="admin-style-map"
                 >
                   <TileLayer
                     attribution="&copy; OpenStreetMap contributors"
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-
-                  <LiveLocationView location={driverLocation} />
-
-                  <Marker
-                    position={[
-                      driverLocation.latitude,
-                      driverLocation.longitude,
-                    ]}
-                  >
-                    <Popup>
-                      <strong>ðŸšŒ BUS001</strong>
-                      <br />
-                      Live driver location
-                      <br />
-                      Accuracy: Â±{Math.round(driverLocation.accuracy)} m
-                    </Popup>
-                  </Marker>
+                  {driverLocation && <LiveLocationView location={driverLocation} />}
+                  {driverAssignment?.stops?.length > 0 && (
+                    <Polyline
+                      positions={driverAssignment.stops
+                        .filter((stop) => Number.isFinite(Number(stop.latitude)) && Number.isFinite(Number(stop.longitude)))
+                        .map((stop) => [Number(stop.latitude), Number(stop.longitude)])}
+                    />
+                  )}
+                  {driverAssignment?.stops?.map((stop) => (
+                    <Marker key={`stop-${stop.id}`} position={[Number(stop.latitude), Number(stop.longitude)]}>
+                      <Popup>
+                        <strong>{stop.stop_order}. {stop.stop_name}</strong>
+                        <br />{stop.stop_type || "STOP"}
+                        <br />Pickup: {stop.scheduled_pickup_time || "—"}
+                        <br />Drop: {stop.scheduled_drop_time || "—"}
+                      </Popup>
+                    </Marker>
+                  ))}
+                  {driverLocation && (
+                    <Marker icon={BUS_MAP_ICON} position={[driverLocation.latitude, driverLocation.longitude]}>
+                      <Popup>
+                        <strong>🚌 {driverAssignment?.bus?.bus_number || "Assigned bus"}</strong>
+                        <br />Live driver location
+                        <br />Accuracy: ±{Math.round(driverLocation.accuracy)} m
+                      </Popup>
+                    </Marker>
+                  )}
                 </MapContainer>
               ) : (
                 <div className="admin-style-map-empty">
-                  <div>ðŸ“</div>
-                  <strong>Waiting for live device location</strong>
-                  <p>Start the trip to begin live tracking.</p>
+                  <div>📍</div>
+                  <strong>{driverAssignmentLoading ? "Loading assigned route…" : "No route assigned"}</strong>
+                  <p>Ask Admin to assign a bus, route and route stops.</p>
                 </div>
               )}
             </div>
 
             <div className="admin-style-floating-bus">
-              <div className="admin-style-bus-icon">ðŸšŒ</div>
+              <div className="admin-style-bus-icon">🚌</div>
               <div>
-                <strong>BUS001</strong>
+                <strong>{driverAssignment?.bus?.bus_number || "Bus not assigned"}</strong>
                 <span>{gpsStatus}</span>
               </div>
               <span className={tripStatus === "IN_PROGRESS" ? "live-pill live" : "live-pill"}>
@@ -4690,7 +4946,7 @@ const response = await fetch(apiUrl, options);
           <aside className="admin-style-dashboard-panel">
 
             <div className="admin-style-panel-heading">
-              <div className="admin-style-panel-icon">ðŸšŒ</div>
+              <div className="admin-style-panel-icon">🚌</div>
               <div>
                 <p>SMART STUDENT BUS</p>
                 <h2>Driver Dashboard</h2>
@@ -4699,47 +4955,107 @@ const response = await fetch(apiUrl, options);
 
             <div className="admin-style-welcome">
               <p>DRIVER</p>
-              <h2>Good morning, Driver ðŸ‘‹</h2>
+              <h2>Good morning, {driverAssignment?.driver?.name || "Driver"} 👋</h2>
               <span>Manage your trip and students.</span>
             </div>
 
             <div className="admin-style-child-card driver-bus-summary">
-              <div className="admin-style-child-avatar">ðŸšŒ</div>
+              <div className="admin-style-child-avatar">🚌</div>
               <div>
-                <strong>BUS001</strong>
-                <span>Main School Route</span>
-                <small>Driver: Ramesh Kumar</small>
+                <strong>{driverAssignment?.bus?.bus_number || "No bus assigned"}</strong>
+                <span>{driverAssignment?.route?.route_name || "No route assigned"}</span>
+                <small>Driver: {driverAssignment?.driver?.name || "Loading driver"}</small>
               </div>
-              <span className="dashboard-status coming">â— ASSIGNED</span>
+              <span className="dashboard-status coming">• ASSIGNED</span>
             </div>
 
             <div className="admin-style-trip-buttons">
               {tripStatus !== "IN_PROGRESS" ? (
-                <button className="start-trip" onClick={startTrip}>
-                  â–¶ Start Trip
-                </button>
+                <>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                    Trip type
+                    <select value={driverTripType} onChange={(event) => setDriverTripType(event.target.value)} disabled={!driverAssignment?.bus?.id}>
+                      <option value="PICKUP">Pickup</option>
+                      <option value="DROP">Drop</option>
+                    </select>
+                  </label>
+                  <button className="start-trip" onClick={startTrip} disabled={tripStarting}>
+                    {tripStarting
+                      ? "Starting trip…"
+                      : `▶ Start ${driverTripType === "PICKUP" ? "Pickup" : "Drop"} Trip`}
+                  </button>
+                </>
               ) : (
-                <button className="stop-trip" onClick={stopTrip}>
-                  â–  Stop Trip
-                </button>
+                <>
+                  <p>Active trip: <strong>{driverTripType}</strong></p>
+                  <button className="stop-trip" onClick={stopTrip}>
+                    ■ Stop Trip
+                  </button>
+                </>
               )}
+              {driverAssignmentLoading && <p className="detection-status">Loading assigned bus and route…</p>}
+              {!driverAssignmentLoading && !driverAssignment?.bus && (
+                <div>
+                  <p className="detection-status">No active bus assignment found. Ask Admin to assign a bus and route.</p>
+                  <button
+                    type="button"
+                    className="camera-button"
+                    onClick={loadDriverAssignment}
+                    disabled={driverAssignmentLoading}
+                  >
+                    ↻ Refresh bus assignment
+                  </button>
+                </div>
+              )}
+              {!driverAssignmentLoading && driverAssignment?.bus && !driverAssignment?.route && (
+                <div>
+                  <p className="detection-status">Bus {driverAssignment.bus.bus_number} is assigned, but no active route is assigned. Ask Admin to assign a route before starting a trip.</p>
+                  <button
+                    type="button"
+                    className="camera-button"
+                    onClick={loadDriverAssignment}
+                    disabled={driverAssignmentLoading}
+                  >
+                    ↻ Refresh bus assignment
+                  </button>
+                </div>
+              )}
+              {attendanceMessage && <p className="detection-status" role="status">{attendanceMessage}</p>}
             </div>
+
+            {driverAssignment?.stops?.length > 0 && (
+              <div className="admin-style-driver-students" style={{ marginTop: "12px" }}>
+                <p className="section-label">Assigned Route Stops</p>
+                {driverAssignment.stops.map((stop) => (
+                  <div className="attendance-row" key={`route-stop-${stop.id}`}>
+                    <div className="attendance-item">
+                      <span className="attendance-icon">📍</span>
+                      <div>
+                        <strong>{stop.stop_order}. {stop.stop_name}</strong>
+                        <p>{stop.stop_type || "STOP"}</p>
+                      </div>
+                    </div>
+                    <span className="attendance-badge pending">{driverTripType === "PICKUP" ? (stop.scheduled_pickup_time || "—") : (stop.scheduled_drop_time || "—")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <p className="admin-style-quick-title">TODAY'S STUDENTS</p>
 
             <div className="admin-style-student-counts">
               <div>
-                <span>ðŸŸ¢</span>
+                <span>🟢</span>
                 <strong>{travelSummary.coming}</strong>
                 <small>Coming</small>
               </div>
               <div>
-                <span>ðŸ”´</span>
+                <span>🔴</span>
                 <strong>{travelSummary.notComing}</strong>
                 <small>Not Coming</small>
               </div>
               <div>
-                <span>âšª</span>
+                <span>⚪</span>
                 <strong>{travelSummary.noStatus}</strong>
                 <small>No Status</small>
               </div>
@@ -4749,9 +5065,9 @@ const response = await fetch(apiUrl, options);
 
             <div className="admin-style-quick-list">
               <button onClick={() => setSelectedMenu("students")}>
-                <span>ðŸ‘¥</span>
+                <span>👥</span>
                 <strong>Student Attendance</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4762,9 +5078,9 @@ const response = await fetch(apiUrl, options);
                   })
                 }
               >
-                <span>ðŸ“·</span>
+                <span>📷</span>
                 <strong>Face Recognition</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button
@@ -4775,15 +5091,15 @@ const response = await fetch(apiUrl, options);
                   })
                 }
               >
-                <span>ðŸ“</span>
+                <span>📍</span>
                 <strong>GPS / Alerts</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
 
               <button onClick={() => setSelectedMenu("my-profile")}>
-                <span>ðŸ‘¤</span>
+                <span>👤</span>
                 <strong>My Profile</strong>
-                <b>â€º</b>
+                <b>›</b>
               </button>
             </div>
 
@@ -4803,26 +5119,22 @@ const response = await fetch(apiUrl, options);
                     className="attendance-row"
                   >
                     <div className="attendance-item">
-                      <span className="attendance-icon">ðŸ‘¨â€ðŸŽ“</span>
+                      <span className="attendance-icon">👨‍🎓</span>
                       <div>
                         <strong>{student.student_name}</strong>
                         <p>{student.student_code}</p>
                       </div>
                     </div>
 
-                    <span
-                      className={
-                        student.status === "COMING"
-                          ? "attendance-badge present"
-                          : "attendance-badge pending"
-                      }
-                    >
-                      {student.status === "COMING"
-                        ? "ðŸŸ¢ COMING"
-                        : student.status === "NOT_COMING"
-                          ? "ðŸ”´ NOT COMING"
-                          : "âšª NO STATUS"}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
+                      <span
+                        className={student.status === "COMING" ? "attendance-badge present" : "attendance-badge pending"}
+                      >
+                        {student.status === "COMING" ? "🟢 COMING" : student.status === "NOT_COMING" ? "🔴 NOT COMING" : "⚪ NO STATUS"}
+                      </span>
+                      <small>Pickup: {student.pickup_status === "PICKED_UP" ? "✓ Picked up" : "Waiting"}</small>
+                      <small>Drop: {student.drop_status === "DROPPED_OFF" ? "✓ Dropped off" : "Waiting"}</small>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -4866,7 +5178,7 @@ const response = await fetch(apiUrl, options);
               <div className="camera-overlay">
 
                 <span className="camera-large-icon">
-                  ðŸ“·
+                  📷
                 </span>
 
 
@@ -4898,6 +5210,10 @@ const response = await fetch(apiUrl, options);
                   }
 
 
+                  const squareSize = Math.min(Math.max(face.width, face.height) * 1.35, video.videoWidth, video.videoHeight);
+                  const squareX = Math.max(0, Math.min(face.x - (squareSize - face.width) / 2, video.videoWidth - squareSize));
+                  const squareY = Math.max(0, Math.min(face.y - (squareSize - face.height) / 2, video.videoHeight - squareSize));
+
                   const recognizedFace =
                     recognizedFaces[index];
 
@@ -4905,7 +5221,7 @@ const response = await fetch(apiUrl, options);
                   const label =
                     recognizedFace &&
                     recognizedFace.recognized
-                      ? `âœ“ ${recognizedFace.name}`
+                      ? `✓ ${recognizedFace.name}`
                       : "Face detected";
 
 
@@ -4916,29 +5232,10 @@ const response = await fetch(apiUrl, options);
                       className="face-box"
                       style={{
 
-                        left:
-                          `${(
-                            face.x /
-                            video.videoWidth
-                          ) * 100}%`,
-
-                        top:
-                          `${(
-                            face.y /
-                            video.videoHeight
-                          ) * 100}%`,
-
-                        width:
-                          `${(
-                            face.width /
-                            video.videoWidth
-                          ) * 100}%`,
-
-                        height:
-                          `${(
-                            face.height /
-                            video.videoHeight
-                          ) * 100}%`,
+                        left: `${(squareX / video.videoWidth) * 100}%`,
+                        top: `${(squareY / video.videoHeight) * 100}%`,
+                        width: `${(squareSize / video.videoWidth) * 100}%`,
+                        height: `${(squareSize / video.videoHeight) * 100}%`,
 
                       }}
                     >
@@ -4968,7 +5265,7 @@ const response = await fetch(apiUrl, options);
 
             {cameraActive
               ? "â¹ Stop Camera"
-              : "ðŸ“· Start Camera"}
+              : "📷 Start Camera"}
 
           </button>
 
@@ -4978,7 +5275,7 @@ const response = await fetch(apiUrl, options);
             <p className="detection-status">
 
               {detecting
-                ? `ðŸ” Detecting faces... (${detectedFaces.length} found)`
+                ? `🔍 Detecting faces... (${detectedFaces.length} found)`
                 : "Camera ready"}
 
             </p>
@@ -5000,7 +5297,7 @@ const response = await fetch(apiUrl, options);
                   >
 
                     {face.recognized
-                      ? `âœ“ ${face.name} (${face.student_code})`
+                      ? `✓ ${face.name} (${face.student_code})`
                       : "âš  Unknown student"}
 
                   </p>
@@ -5017,7 +5314,7 @@ const response = await fetch(apiUrl, options);
 
             <p className="detection-status">
 
-              âœ“ {attendanceMessage}
+              ✓ {attendanceMessage}
 
             </p>
 
@@ -5040,7 +5337,7 @@ const response = await fetch(apiUrl, options);
             <div className="attendance-item">
 
               <span className="attendance-icon">
-                ðŸ‘¤
+                👤
               </span>
 
 
@@ -5112,7 +5409,7 @@ const response = await fetch(apiUrl, options);
             <div className="attendance-item">
 
               <span className="attendance-icon">
-                ðŸ“
+                📍
               </span>
 
 
@@ -5154,7 +5451,7 @@ const response = await fetch(apiUrl, options);
 
                     Accuracy:
                     {" "}
-                    Â±{Math.round(driverLocation.accuracy)} m
+                    ±{Math.round(driverLocation.accuracy)} m
 
                   </p>
 
@@ -5203,7 +5500,7 @@ const response = await fetch(apiUrl, options);
             className={!selectedMenu ? "active" : ""}
             onClick={() => setSelectedMenu(null)}
           >
-            <span>ðŸ </span>
+            <span>🏠</span>
             <small>Home</small>
           </button>
 
@@ -5211,7 +5508,7 @@ const response = await fetch(apiUrl, options);
             className={selectedMenu === "students" ? "active" : ""}
             onClick={() => setSelectedMenu("students")}
           >
-            <span>ðŸ‘¥</span>
+            <span>👥</span>
             <small>Students</small>
           </button>
 
@@ -5224,7 +5521,7 @@ const response = await fetch(apiUrl, options);
               })
             }
           >
-            <span>ðŸšŒ</span>
+            <span>🚌</span>
             <small>Trip</small>
           </button>
 
@@ -5237,7 +5534,7 @@ const response = await fetch(apiUrl, options);
               })
             }
           >
-            <span>ðŸ“</span>
+            <span>📍</span>
             <small>GPS</small>
           </button>
 
@@ -5245,7 +5542,7 @@ const response = await fetch(apiUrl, options);
             className={selectedMenu === "my-profile" ? "active" : ""}
             onClick={() => setSelectedMenu("my-profile")}
           >
-            <span>ðŸ‘¤</span>
+            <span>👤</span>
             <small>Profile</small>
           </button>
         </nav>
@@ -5279,7 +5576,7 @@ const response = await fetch(apiUrl, options);
         <header className="parent-header admin-reference-header">
 
           <div className="admin-reference-brand">
-            <div className="admin-reference-logo">ðŸšŒ</div>
+            <div className="admin-reference-logo">🚌</div>
 
             <div>
               <p className="admin-reference-brand-name">
@@ -5299,7 +5596,7 @@ const response = await fetch(apiUrl, options);
               onClick={() => setSelectedMenu("notifications")}
               title="Notifications"
             >
-              ðŸ””
+              🔔
             </button>
 
             <button
@@ -5316,7 +5613,7 @@ const response = await fetch(apiUrl, options);
               </span>
 
               <span className="admin-reference-chevron">
-                âŒ„
+                ⌄
               </span>
             </button>
 
@@ -5331,7 +5628,7 @@ const response = await fetch(apiUrl, options);
           <div className="admin-sidebar-brand">
 
             <div className="admin-sidebar-logo">
-              ðŸšŒ
+              🚌
             </div>
 
             <div>
@@ -5358,7 +5655,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu(null)}
             >
-              <span>ðŸ </span>
+              <span>🏠</span>
               <span>Dashboard</span>
             </button>
 
@@ -5372,7 +5669,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("students")}
             >
-              <span>ðŸ‘¨â€ðŸŽ“</span>
+              <span>👨‍🎓</span>
               <span>Students</span>
             </button>
 
@@ -5385,7 +5682,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("buses")}
             >
-              <span>ðŸšŒ</span>
+              <span>🚌</span>
               <span>Buses</span>
             </button>
 
@@ -5398,7 +5695,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("drivers")}
             >
-              <span>ðŸ‘¨â€âœˆï¸</span>
+              <span>👨‍✈️</span>
               <span>Drivers</span>
             </button>
 
@@ -5411,7 +5708,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("parents")}
             >
-              <span>ðŸ‘¨â€ðŸ‘©â€ðŸ‘§</span>
+              <span>👨‍👩‍👧</span>
               <span>Parents</span>
             </button>
 
@@ -5424,7 +5721,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("stop-management")}
             >
-              <span>ðŸ—ºï¸</span>
+              <span>🗺️</span>
               <span>Routes & Stops</span>
             </button>
 
@@ -5437,7 +5734,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("live-bus-location")}
             >
-              <span>ðŸ“</span>
+              <span>📍</span>
               <span>Live Bus Tracking</span>
             </button>
 
@@ -5450,7 +5747,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("attendance")}
             >
-              <span>ðŸ“Š</span>
+              <span>📊</span>
               <span>Attendance</span>
             </button>
 
@@ -5473,7 +5770,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("notifications")}
             >
-              <span>ðŸ””</span>
+              <span>🔔</span>
               <span>Notifications</span>
             </button>
 
@@ -5486,7 +5783,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("announcements")}
             >
-              <span>ðŸ“¢</span>
+              <span>📢</span>
               <span>Announcements</span>
             </button>
 
@@ -5509,7 +5806,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("settings")}
             >
-              <span>âš™ï¸</span>
+              <span>⚙️</span>
               <span>Settings</span>
             </button>
 
@@ -5522,7 +5819,7 @@ const response = await fetch(apiUrl, options);
               }
               onClick={() => setSelectedMenu("my-profile")}
             >
-              <span>ðŸ‘¤</span>
+              <span>👤</span>
               <span>My Profile</span>
             </button>
 
@@ -5536,7 +5833,7 @@ const response = await fetch(apiUrl, options);
               className="admin-sidebar-item admin-logout-item"
               onClick={logout}
             >
-              <span>ðŸšª</span>
+              <span>🚪</span>
               <span>Logout</span>
             </button>
 
@@ -5552,6 +5849,7 @@ const response = await fetch(apiUrl, options);
             <StopManagement
               routes={routes}
               token={localStorage.getItem("token")}
+              onRoutesChanged={loadRoutes}
             />
 
           </section>
@@ -5599,6 +5897,7 @@ const response = await fetch(apiUrl, options);
                   resetStudentForm();
 
                   setStudentFormOpen(true);
+                  loadAdminStops();
 
                   setFaceRegistrationOpen(false);
 
@@ -5911,6 +6210,22 @@ const response = await fetch(apiUrl, options);
 
                   </label>
 
+                  <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    Pickup Stop
+                    <select value={studentForm.pickup_stop_id} onChange={(event) => setStudentForm((previous) => ({ ...previous, pickup_stop_id: event.target.value }))}>
+                      <option value="">Select pickup stop (optional)</option>
+                      {adminStops.map((stop) => <option key={`pickup-${stop.id}`} value={stop.id}>{stop.stop_name}</option>)}
+                    </select>
+                  </label>
+
+                  <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    Drop Stop
+                    <select value={studentForm.drop_stop_id} onChange={(event) => setStudentForm((previous) => ({ ...previous, drop_stop_id: event.target.value }))}>
+                      <option value="">Select drop stop (optional)</option>
+                      {adminStops.map((stop) => <option key={`drop-${stop.id}`} value={stop.id}>{stop.stop_name}</option>)}
+                    </select>
+                  </label>
+
                 </div>
 
 
@@ -5956,12 +6271,35 @@ const response = await fetch(apiUrl, options);
             )}
 
 
+            {studentEditOpen && (
+              <div role="dialog" aria-modal="true" aria-label="Edit student" style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 16 }}>
+                <form onSubmit={saveStudentEdit} style={{ width: "min(680px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 16, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
+                  <h3 style={{ marginTop: 0 }}>Edit Student</h3>
+                  <p>Update the student details and transport assignments.</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                    <label>Student Name<input required value={studentEditForm.name} onChange={e => setStudentEditForm(p => ({ ...p, name: e.target.value }))} /></label>
+                    <label>Class<input required value={studentEditForm.class_name} onChange={e => setStudentEditForm(p => ({ ...p, class_name: e.target.value }))} /></label>
+                    <label>Bus<select value={studentEditForm.bus_id} onChange={e => setStudentEditForm(p => ({ ...p, bus_id: e.target.value }))}><option value="">Unassigned</option>{adminBuses.map(bus => <option key={bus.id} value={bus.id}>{bus.bus_number}</option>)}</select></label>
+                    <label>Pickup Stop<select value={studentEditForm.pickup_stop_id} onChange={e => setStudentEditForm(p => ({ ...p, pickup_stop_id: e.target.value }))}><option value="">Unassigned</option>{adminStops.map(stop => <option key={stop.id} value={stop.id}>{stop.stop_name || stop.name || `Stop ${stop.id}`}</option>)}</select></label>
+                    <label>Drop Stop<select value={studentEditForm.drop_stop_id} onChange={e => setStudentEditForm(p => ({ ...p, drop_stop_id: e.target.value }))}><option value="">Unassigned</option>{adminStops.map(stop => <option key={stop.id} value={stop.id}>{stop.stop_name || stop.name || `Stop ${stop.id}`}</option>)}</select></label>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18, justifyContent: "space-between" }}>
+                    <button type="button" className="figma-row-action primary" onClick={() => { const student = students.find(s => s.id === studentEditForm.id); if (student) { setStudentEditOpen(false); openFaceRegistration(student); } }}> {studentEditForm.has_face ? "Update Face" : "Register Face"} </button>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button type="button" className="figma-row-action" onClick={() => setStudentEditOpen(false)} disabled={studentEditSaving}>Cancel</button>
+                      <button type="submit" className="figma-row-action primary" disabled={studentEditSaving}>{studentEditSaving ? "Saving…" : "Save Changes"}</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+
             <div className="figma-student-list-wrap">
 
               <div className="figma-student-toolbar">
 
                 <div className="figma-student-search-wrap">
-                  <span className="figma-student-search-icon" aria-hidden="true">âŒ•</span>
+                  <span className="figma-student-search-icon" aria-hidden="true">⌕</span>
                   <input
                     type="search"
                     value={studentSearch}
@@ -6057,8 +6395,8 @@ const response = await fetch(apiUrl, options);
                       <span role="columnheader">ID / CLASS</span>
                       <span role="columnheader">PARENT</span>
                       <span role="columnheader">ASSIGNED BUS</span>
-                      <span role="columnheader">FACE</span>
-                      <span role="columnheader">STATUS</span>
+                      <span role="columnheader">EDIT</span>
+                      <span role="columnheader">DELETE</span>
                       <span role="columnheader">ACTIONS</span>
                     </div>
 
@@ -6069,9 +6407,6 @@ const response = await fetch(apiUrl, options);
                         parent.mother_name ||
                         parent.username ||
                         "Not assigned";
-                      const busLabel = student.bus_id
-                        ? student.bus?.bus_number || `BUS ${String(student.bus_id).padStart(3, "0")}`
-                        : "Unassigned";
                       const status = String(student.status || "ACTIVE").toUpperCase();
                       const initials = String(student.name || "ST")
                         .trim()
@@ -6092,7 +6427,7 @@ const response = await fetch(apiUrl, options);
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <strong>{student.student_code || "â€”"}</strong>
+                            <strong>{student.student_code || "—"}</strong>
                             <small>{student.class_name || "CLASS NOT ASSIGNED"}</small>
                           </div>
 
@@ -6102,22 +6437,26 @@ const response = await fetch(apiUrl, options);
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <strong>{busLabel}</strong>
+                            <select
+                              aria-label={`Assign bus to ${student.name}`}
+                              value={student.bus_id ?? ""}
+                              onChange={(event) => assignStudentBus(student.id, event.target.value)}
+                              style={{ maxWidth: "160px", minWidth: "125px" }}
+                            >
+                              <option value="">Unassigned</option>
+                              {adminBuses.map((bus) => (
+                                <option key={bus.id} value={bus.id}>{bus.bus_number}</option>
+                              ))}
+                            </select>
                             <small>{student.bus_id ? "ASSIGNED" : "WAITING"}</small>
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <span className={`figma-status-chip ${student.has_face ? "success" : "warning"}`}>
-                              <i aria-hidden="true"></i>
-                              {student.has_face ? "VERIFIED" : "PENDING"}
-                            </span>
+                            <button type="button" className="figma-row-action primary" onClick={() => openStudentEdit(student)} aria-label={`Edit ${student.name}`}>EDIT</button>
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <span className={`figma-status-chip ${status === "ACTIVE" ? "success" : "neutral"}`}>
-                              <i aria-hidden="true"></i>
-                              {status}
-                            </span>
+                            <button type="button" className="figma-row-action danger" onClick={() => deleteStudent(student)} aria-label={`Delete ${student.name}`}>DELETE</button>
                           </div>
 
                           <div className="figma-student-actions" role="cell">
@@ -6131,15 +6470,6 @@ const response = await fetch(apiUrl, options);
                               {student.has_face ? "FACE" : "REGISTER"}
                             </button>
 
-                            <button
-                              type="button"
-                              className="figma-row-action danger"
-                              onClick={() => deleteStudent(student)}
-                              title="Delete student"
-                              aria-label={`Delete ${student.name}`}
-                            >
-                              DELETE
-                            </button>
                           </div>
                         </div>
                       );
@@ -6217,7 +6547,7 @@ const response = await fetch(apiUrl, options);
                     <div className="camera-overlay">
 
                       <span className="camera-large-icon">
-                        ðŸ“·
+                        📷
                       </span>
 
                       <p>
@@ -6246,35 +6576,20 @@ const response = await fetch(apiUrl, options);
 
                         }
 
+                        const squareSize = Math.min(Math.max(face.width, face.height) * 1.35, video.videoWidth, video.videoHeight);
+                        const squareX = Math.max(0, Math.min(face.x - (squareSize - face.width) / 2, video.videoWidth - squareSize));
+                        const squareY = Math.max(0, Math.min(face.y - (squareSize - face.height) / 2, video.videoHeight - squareSize));
+
                         return (
 
                           <div
                             key={index}
                             className="face-box"
                             style={{
-                              left:
-                                `${(
-                                  face.x /
-                                  video.videoWidth
-                                ) * 100}%`,
-
-                              top:
-                                `${(
-                                  face.y /
-                                  video.videoHeight
-                                ) * 100}%`,
-
-                              width:
-                                `${(
-                                  face.width /
-                                  video.videoWidth
-                                ) * 100}%`,
-
-                              height:
-                                `${(
-                                  face.height /
-                                  video.videoHeight
-                                ) * 100}%`,
+                              left: `${(squareX / video.videoWidth) * 100}%`,
+                              top: `${(squareY / video.videoHeight) * 100}%`,
+                              width: `${(squareSize / video.videoWidth) * 100}%`,
+                              height: `${(squareSize / video.videoHeight) * 100}%`,
                             }}
                           >
 
@@ -6302,7 +6617,7 @@ const response = await fetch(apiUrl, options);
                 >
                   {cameraActive
                     ? "â¹ Stop Camera"
-                    : "ðŸ“· Start Camera"}
+                    : "📷 Start Camera"}
                 </button>
 
 
@@ -6317,7 +6632,7 @@ const response = await fetch(apiUrl, options);
                 >
                   {registering
                     ? "Registering..."
-                    : "âœ“ Save Face"}
+                    : "✓ Save Face"}
                 </button>
 
 
@@ -6337,131 +6652,98 @@ const response = await fetch(apiUrl, options);
 
         )}
 
-        {/* SYSTEM OVERVIEW */}
-
-        <section className="bus-info-card admin-reference-summary-card">
-
-          <p className="section-label">
-            System Overview
-          </p>
-
-
-          <div className="bus-info-grid">
-
-            <div className="bus-info-item">
-
-              <span className="bus-info-icon">
-                ðŸ‘¨â€ðŸŽ“
-              </span>
-
-
-              <div>
-
-                <span>
-                  Students
-                </span>
-
-
-                <strong>
-                  {students.length || 1}
-                </strong>
-
-              </div>
-
-            </div>
-
-
-            <div className="bus-info-item">
-
-              <span className="bus-info-icon">
-                ðŸšŒ
-              </span>
-
-
-              <div>
-
-                <span>
-                  Buses
-                </span>
-
-
-                <strong>
-                  1
-                </strong>
-
-              </div>
-
-            </div>
-
-
-            <div className="bus-info-item">
-
-              <span className="bus-info-icon">
-                ðŸ‘¨â€âœˆï¸
-              </span>
-
-
-              <div>
-
-                <span>
-                  Drivers
-                </span>
-
-
-                <strong>
-                  1
-                </strong>
-
-              </div>
-
-            </div>
-
-
-            <div className="bus-info-item">
-
-              <span className="bus-info-icon">
-                ðŸ‘¨â€ðŸ‘©â€ðŸ‘§
-              </span>
-
-
-              <div>
-
-                <span>
-                  Parents
-                </span>
-
-
-                <strong>
-                  2
-                </strong>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
+        {selectedMenu && ![
+          "students",
+          "student-management",
+          "stop-management",
+        ].includes(selectedMenu) && (
+          <AdminWorkspace
+            selectedMenu={selectedMenu}
+            token={localStorage.getItem("token")}
+            busLocation={busLocation}
+            busLocationStatus={busLocationStatus}
+          />
+        )}
 
         {/* LIVE BUS TRACKING */}
 
-        <section className="map-card admin-reference-map-card">
+        <section
+          className="map-card admin-reference-map-card"
+          style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 170px)", minHeight: "520px", margin: 0 }}
+        >
 
           <div
             style={{
               width: "100%",
-              minHeight: "350px",
+              flex: "1 1 auto",
+              height: "100%",
+              minHeight: "0",
               position: "relative",
+              overflow: "hidden",
             }}
           >
+
+            {/* Draggable System Overview: constrained to the map frame */}
+            <section
+              className="bus-info-card admin-reference-summary-card"
+              style={{
+                position: "absolute",
+                left: overviewPosition.x,
+                top: overviewPosition.y,
+                zIndex: 1000,
+                width: "min(360px, calc(100% - 32px))",
+                margin: 0,
+                maxHeight: "calc(100% - 32px)",
+                overflowY: "auto",
+                boxShadow: "0 8px 28px rgba(15, 23, 42, 0.22)",
+              }}
+            >
+              <p
+                className="section-label"
+                style={{ cursor: "grab", userSelect: "none", touchAction: "none" }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  overviewDragRef.current = {
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    startLeft: overviewPosition.x,
+                    startTop: overviewPosition.y,
+                  };
+                }}
+                onPointerMove={(event) => {
+                  const drag = overviewDragRef.current;
+                  if (!drag || drag.pointerId !== event.pointerId) return;
+                  const frame = event.currentTarget.parentElement.getBoundingClientRect();
+                  const panel = event.currentTarget.parentElement.querySelector(".admin-reference-summary-card").getBoundingClientRect();
+                  const nextX = drag.startLeft + event.clientX - drag.startX;
+                  const nextY = drag.startTop + event.clientY - drag.startY;
+                  setOverviewPosition({
+                    x: Math.max(0, Math.min(nextX, frame.width - panel.width)),
+                    y: Math.max(0, Math.min(nextY, frame.height - panel.height)),
+                  });
+                }}
+                onPointerUp={() => { overviewDragRef.current = null; }}
+                onPointerCancel={() => { overviewDragRef.current = null; }}
+              >
+                System Overview · Drag to move
+              </p>
+              <div className="bus-info-grid">
+                <div className="bus-info-item"><span className="bus-info-icon">👨‍🎓</span><div><span>Students</span><strong>{adminOverview.students ?? students.length}</strong></div></div>
+                <div className="bus-info-item"><span className="bus-info-icon">🚌</span><div><span>Buses</span><strong>{adminOverview.buses ?? 0}</strong></div></div>
+                <div className="bus-info-item"><span className="bus-info-icon">👨‍✈️</span><div><span>Drivers</span><strong>{adminOverview.drivers ?? 0}</strong></div></div>
+                <div className="bus-info-item"><span className="bus-info-icon">👨‍👩‍👧</span><div><span>Parents</span><strong>{adminOverview.parents ?? 0}</strong></div></div>
+              </div>
+            </section>
+
 
             <MapContainer
               center={adminMapView.center}
               zoom={adminMapView.zoom}
               style={{
                 width: "100%",
-                height: "350px",
+                height: "100%",
               }}
             >
 
@@ -6475,13 +6757,14 @@ const response = await fetch(apiUrl, options);
               />
 
               <Marker
+                icon={SCHOOL_MAP_ICON}
                 position={[
                   17.289612892928957,
                   76.86886054620065,
                 ]}
               >
                 <Popup>
-                  <strong>ðŸ« Shetty Institute of Technology</strong>
+                  <strong>🏫 Shetty Institute of Technology</strong>
                   <br />
                   School
                 </Popup>
@@ -6491,6 +6774,7 @@ const response = await fetch(apiUrl, options);
 
                 <>
                   <Marker
+                    icon={BUS_MAP_ICON}
                     position={[
                       busLocation.latitude,
                       busLocation.longitude,
@@ -6500,7 +6784,7 @@ const response = await fetch(apiUrl, options);
                     <Popup>
 
                       <strong>
-                        ðŸšŒ BUS001
+                        🚌 Fleet bus
                       </strong>
 
                       <br />
@@ -6544,7 +6828,7 @@ const response = await fetch(apiUrl, options);
             <div>
 
               <strong>
-                ðŸšŒ BUS001
+                🚌 Fleet tracking
               </strong>
 
 
@@ -6592,7 +6876,7 @@ const response = await fetch(apiUrl, options);
           >
 
             <span>
-              ðŸ‘¨â€ðŸŽ“
+              👨‍🎓
             </span>
 
 
@@ -6615,7 +6899,7 @@ const response = await fetch(apiUrl, options);
           <button className="action-card">
 
             <span>
-              ðŸšŒ
+              🚌
             </span>
 
 
@@ -6638,7 +6922,7 @@ const response = await fetch(apiUrl, options);
           <button className="action-card">
 
             <span>
-              ðŸ‘¨â€âœˆï¸
+              👨‍✈️
             </span>
 
 
@@ -6661,7 +6945,7 @@ const response = await fetch(apiUrl, options);
           <button className="action-card">
 
             <span>
-              ðŸ—ºï¸
+              🗺️
             </span>
 
 
@@ -6684,7 +6968,7 @@ const response = await fetch(apiUrl, options);
           <button className="action-card">
 
             <span>
-              ðŸ“Š
+              📊
             </span>
 
 
@@ -6707,7 +6991,7 @@ const response = await fetch(apiUrl, options);
           <button className="action-card">
 
             <span>
-              ðŸ””
+              🔔
             </span>
 
 
@@ -6741,4 +7025,3 @@ const response = await fetch(apiUrl, options);
 
 
 export default App;
-
