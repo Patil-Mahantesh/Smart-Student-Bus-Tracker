@@ -1,10 +1,11 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
+  Polyline,
   useMap,
 } from "react-leaflet";
 
@@ -18,6 +19,18 @@ import {
   adminMenu,
   driverMenu,
 } from "./flowConfig";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
+
+function getLocalDateString() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 
 // ============================================================
@@ -258,8 +271,8 @@ function App() {
   const [attendanceMessage, setAttendanceMessage] =
     useState("");
 
-  const [attendanceMarked, setAttendanceMarked] =
-    useState({});
+  const attendanceMarkedRef = useRef({});
+  const recognitionInFlightRef = useRef(false);
 
 
   // ============================================================
@@ -292,6 +305,8 @@ function App() {
 
   const [routes, setRoutes] =
     useState([]);
+
+  const [adminBuses, setAdminBuses] = useState([]);
 
   const [adminOverview, setAdminOverview] = useState({
     students: 0,
@@ -348,6 +363,11 @@ function App() {
   // ============================================================
 
   const [tripId, setTripId] = useState(null);
+
+  const [driverTripType, setDriverTripType] = useState("PICKUP");
+  const [driverAssignment, setDriverAssignment] = useState(null);
+  const [driverAssignmentLoading, setDriverAssignmentLoading] = useState(false);
+  const [tripStarting, setTripStarting] = useState(false);
 
   const [tripStatus, setTripStatus] =
     useState("NOT_STARTED");
@@ -608,7 +628,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/notifications",
+          "http://127.0.0.1:5000/api/notifications",
           {
             method: "GET",
 
@@ -678,7 +698,7 @@ function App() {
     try {
 
       const response = await apiFetch(
-        "https://smart-student-bus-tracker-backend.onrender.com/api/parents/children",
+        "http://127.0.0.1:5000/api/parents/children",
         {
           method: "GET",
           headers: {
@@ -764,6 +784,14 @@ function App() {
   }, [selectedRole]);
 
 
+  // Poll notifications while a Parent is signed in so pickup/drop events appear automatically.
+  useEffect(() => {
+    if (selectedRole !== "PARENT_HOME") return;
+    const interval = setInterval(() => loadParentNotifications(), 12000);
+    return () => clearInterval(interval);
+  }, [selectedRole]);
+
+
   // ============================================================
   // REFRESH ATTENDANCE WHEN CALENDAR IS OPENED
   // ============================================================
@@ -809,7 +837,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/attendance/student/${studentId}`,
+          `http://127.0.0.1:5000/api/attendance/student/${studentId}`,
           {
             method: "GET",
             headers: {
@@ -978,138 +1006,70 @@ function App() {
   // LOAD LIVE BUS LOCATION
   // ============================================================
 
-  const loadLiveBusLocation = async () => {
-
-    const token =
-      localStorage.getItem("token");
+  const loadLiveBusLocation = async (busId = selectedParentChild?.bus_id) => {
+    const token = localStorage.getItem("token");
 
     if (!token) {
-
       setBusLocation(null);
-
-      setBusLocationStatus(
-        "Please login to view live bus location."
-      );
-
+      setBusLocationStatus("Please login to view live bus location.");
       return;
+    }
 
+    if (!busId) {
+      setBusLocation(null);
+      setBusLocationStatus("No bus is assigned to this child yet. Please contact Admin.");
+      return;
     }
 
     try {
-
-      const response =
-        await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/locations/bus/1/latest",
-          {
-            method: "GET",
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-            },
-          }
-        );
-
-
-      const data =
-        await response.json();
-
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/locations/bus/${busId}/latest`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
 
       if (!response.ok) {
-
-        console.error(
-          "Live bus location request failed:",
-          data
-        );
-
         setBusLocation(null);
-
-        setBusLocationStatus(
-          data.message ||
-          "Unable to load live bus location."
-        );
-
+        setBusLocationStatus(data.message || "Unable to load live bus location.");
         return;
-
       }
-
 
       if (data.location) {
-
-        setBusLocation(
-          data.location
-        );
-
-        setBusLocationStatus(
-          "LIVE • Bus location updating"
-        );
-
+        setBusLocation(data.location);
+        setBusLocationStatus("LIVE • Bus location updating");
       } else {
-
         setBusLocation(null);
-
-        setBusLocationStatus(
-          "Bus is not currently on an active trip."
-        );
-
+        setBusLocationStatus("Bus is not currently on an active trip.");
       }
-
     } catch (error) {
-
-      console.error(
-        "Live bus location error:",
-        error
-      );
-
-      setBusLocationStatus(
-        "Unable to connect to live location service."
-      );
-
+      console.error("Live bus location error:", error);
+      setBusLocationStatus("Unable to connect to live location service.");
     }
-
   };
 
 
-  // ============================================================
-  // POLL LIVE BUS LOCATION FOR PARENT / ADMIN
-  // ============================================================
-
+  // Only poll the bus assigned to the selected Parent child.
   useEffect(() => {
-
-    const isTrackingDashboard =
-      selectedRole === "PARENT_HOME" ||
-      selectedRole === "ADMIN_HOME";
-
-
-    if (!isTrackingDashboard) {
-
+    if (selectedRole !== "PARENT_HOME") {
       setBusLocation(null);
-
-      setBusLocationStatus(
-        "Waiting for live bus location"
-      );
-
+      setBusLocationStatus("Waiting for live bus location");
       return;
-
     }
 
+    const busId = selectedParentChild?.bus_id;
+    if (!busId) {
+      setBusLocation(null);
+      setBusLocationStatus("No bus is assigned to this child yet. Please contact Admin.");
+      return;
+    }
 
-    loadLiveBusLocation();
-
-
-    const interval =
-      setInterval(
-        loadLiveBusLocation,
-        3000
-      );
-
-
-    return () => {
-
-      clearInterval(interval);
-
-    };
-
-  }, [selectedRole]);
+    loadLiveBusLocation(busId);
+    const interval = setInterval(() => loadLiveBusLocation(busId), 5000);
+    return () => clearInterval(interval);
+  }, [selectedRole, selectedParentChild?.bus_id]);
 
 
   // ============================================================
@@ -1303,7 +1263,6 @@ function App() {
 
     }
 
-
     try {
 
       const token =
@@ -1319,7 +1278,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/face/detect",
+          "http://127.0.0.1:5000/api/face/detect",
           {
 
             method: "POST",
@@ -1419,7 +1378,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/attendance/mark",
+          "http://127.0.0.1:5000/api/attendance/mark",
           {
 
             method: "POST",
@@ -1444,6 +1403,9 @@ function App() {
 
               confidence:
                 confidence,
+
+              latitude: driverLocation?.latitude ?? null,
+              longitude: driverLocation?.longitude ?? null,
 
             }),
 
@@ -1501,6 +1463,8 @@ function App() {
 
   const recognizeFace = async () => {
 
+    if (recognitionInFlightRef.current) return;
+
     if (!videoRef.current) {
 
       return;
@@ -1525,6 +1489,7 @@ function App() {
 
     }
 
+    recognitionInFlightRef.current = true;
 
     try {
 
@@ -1541,7 +1506,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/face/recognize",
+          "http://127.0.0.1:5000/api/face/recognize",
           {
 
             method: "POST",
@@ -1585,10 +1550,10 @@ function App() {
       const faces =
         data.faces || [];
 
-
-      setRecognizedFaces(
-        faces
-      );
+      // Recognition response already includes each face bounding box.
+      // Reuse it instead of running a second, separate detection inference.
+      setDetectedFaces(faces);
+      setRecognizedFaces(faces);
 
 
       const recognizedStudent =
@@ -1609,9 +1574,7 @@ function App() {
         recognizedStudent.student_id;
 
 
-      if (
-        attendanceMarked[studentId]
-      ) {
+      if (attendanceMarkedRef.current[studentId]) {
 
         return;
 
@@ -1627,15 +1590,7 @@ function App() {
 
       if (success) {
 
-        setAttendanceMarked(
-          (previous) => ({
-
-            ...previous,
-
-            [studentId]: true,
-
-          })
-        );
+        attendanceMarkedRef.current[studentId] = true;
 
       }
 
@@ -1646,6 +1601,8 @@ function App() {
         error
       );
 
+    } finally {
+      recognitionInFlightRef.current = false;
     }
 
   };
@@ -1669,14 +1626,14 @@ function App() {
 
     const interval =
       setInterval(() => {
-
-        detectFace();
-
         if (selectedRole === "DRIVER_HOME") {
+          // One recognition request returns both the face box and identity.
           recognizeFace();
+        } else {
+          // Admin face registration needs detection boxes only.
+          detectFace();
         }
-
-      }, 1000);
+      }, 1200);
 
 
     return () => {
@@ -1771,7 +1728,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/face-registration/${selectedStudentId}`,
+          `http://127.0.0.1:5000/api/face-registration/${selectedStudentId}`,
           {
 
             method: "POST",
@@ -1811,8 +1768,6 @@ function App() {
 
       }
 
-
-      setAttendanceMarked({});
 
 
       setRegistrationStatus(
@@ -1860,7 +1815,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/students",
+          "http://127.0.0.1:5000/api/students",
           {
             method: "GET",
             headers: {
@@ -1926,7 +1881,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/admin/routes",
+          "http://127.0.0.1:5000/api/admin/routes",
           {
             method: "GET",
 
@@ -1967,6 +1922,48 @@ function App() {
 
     }
 
+  };
+
+
+  const loadAdminBuses = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/admin/buses`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to load buses.");
+      setAdminBuses(data.buses || []);
+    } catch (error) {
+      console.error("Admin buses loading error:", error);
+      setStudentCreateMessage(error.message || "Unable to load buses.");
+    }
+  };
+
+
+  const assignStudentBus = async (studentId, rawBusId) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/students/${studentId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bus_id: rawBusId ? Number(rawBusId) : null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to assign bus.");
+      setStudentCreateMessage(data.message || "Student bus assignment updated.");
+      await loadStudents();
+    } catch (error) {
+      console.error("Student bus assignment error:", error);
+      setStudentCreateMessage(error.message || "Unable to assign bus.");
+      await loadStudents();
+    }
   };
 
 
@@ -2073,7 +2070,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/students",
+          "http://127.0.0.1:5000/api/students",
           {
             method: "POST",
 
@@ -2218,7 +2215,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/students/${student.id}`,
+          `http://127.0.0.1:5000/api/students/${student.id}`,
           {
             method: "DELETE",
             headers: {
@@ -2315,9 +2312,8 @@ function App() {
       selectedMenu === "student-management" ||
       selectedMenu === "students"
     ) {
-
       loadStudents();
-
+      loadAdminBuses();
     }
 
     if (
@@ -2331,6 +2327,7 @@ function App() {
     if (selectedMenu === null) {
       loadStudents();
       loadRoutes();
+      loadAdminBuses();
     }
 
   }, [selectedRole, selectedMenu]);
@@ -2352,7 +2349,7 @@ function App() {
     const loadAdminOverview = async () => {
       try {
         const response = await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/admin/overview",
+          "http://127.0.0.1:5000/api/admin/overview",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -2374,7 +2371,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [selectedRole, selectedMenu]);
+  }, [selectedRole]);
 
 
   // ============================================================
@@ -2398,7 +2395,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/auth/login",
+          "http://127.0.0.1:5000/api/auth/login",
           {
 
             method: "POST",
@@ -2532,7 +2529,7 @@ function App() {
     setSelectedMenu(null);
     setSelectedRole(null);
 
-    setAttendanceMarked({});
+    attendanceMarkedRef.current = {};
     setAttendanceMessage("");
     setNotifications([]);
     setUnreadNotificationCount(0);
@@ -2543,6 +2540,9 @@ function App() {
 
     setTripId(null);
     setTripStatus("NOT_STARTED");
+    setDriverAssignment(null);
+    setDriverTripType("PICKUP");
+    setTodayTravelStudents([]);
 
     setDriverLocation(null);
     setBusLocation(null);
@@ -2600,7 +2600,7 @@ function App() {
 
         const response =
           await apiFetch(
-            `https://smart-student-bus-tracker-backend.onrender.com/api/notifications/${notificationId}/read`,
+            `http://127.0.0.1:5000/api/notifications/${notificationId}/read`,
             {
 
               method: "PUT",
@@ -2668,16 +2668,13 @@ function App() {
 
     setTravelStatusLoading(true);
 
-    const travelDate =
-      new Date()
-        .toISOString()
-        .split("T")[0];
+    const travelDate = getLocalDateString();
 
     try {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/status/${studentId}?travel_date=${travelDate}`,
+          `http://127.0.0.1:5000/api/travel/status/${studentId}?travel_date=${travelDate}`,
           {
             method: "GET",
 
@@ -2740,18 +2737,13 @@ function App() {
         return;
       }
 
-      setTravelStatus(status);
-
-      const travelDate =
-        new Date()
-          .toISOString()
-          .split("T")[0];
+      const travelDate = getLocalDateString();
 
       try {
 
         const response =
           await apiFetch(
-            "https://smart-student-bus-tracker-backend.onrender.com/api/travel/status",
+            "http://127.0.0.1:5000/api/travel/status",
             {
               method: "POST",
 
@@ -2776,8 +2768,6 @@ function App() {
 
         if (!response.ok) {
 
-          setTravelStatus(null);
-
           alert(
             data.message ||
             "Unable to update travel status"
@@ -2796,8 +2786,6 @@ function App() {
           "Travel status error:",
           error
         );
-
-        setTravelStatus(null);
 
         alert(
           "Unable to connect to backend."
@@ -2825,6 +2813,31 @@ function App() {
   }, [selectedRole, selectedParentChild?.id]);
 
 
+  const loadDriverAssignment = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setDriverAssignmentLoading(true);
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/drivers/assignment`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setDriverAssignment(null);
+        throw new Error(data.message || "No bus assignment found for this Driver.");
+      }
+      setDriverAssignment(data);
+    } catch (error) {
+      console.error("Driver assignment loading error:", error);
+      setDriverAssignment(null);
+      setAttendanceMessage(error.message || "Unable to load assigned route.");
+    } finally {
+      setDriverAssignmentLoading(false);
+    }
+  };
+
+
   // ============================================================
   // LOAD TODAY'S STUDENT TRAVEL STATUS
   // ============================================================
@@ -2840,16 +2853,13 @@ function App() {
 
     setTravelStudentsLoading(true);
 
-    const travelDate =
-      new Date()
-        .toISOString()
-        .split("T")[0];
+    const travelDate = getLocalDateString();
 
     try {
 
       const response =
         await apiFetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/travel/today?travel_date=${travelDate}`,
+          `http://127.0.0.1:5000/api/travel/today?travel_date=${travelDate}`,
           {
             method: "GET",
             headers: {
@@ -2920,6 +2930,7 @@ function App() {
       return;
     }
 
+    loadDriverAssignment();
     loadTodayTravelStudents();
 
   }, [selectedRole]);
@@ -3015,7 +3026,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/locations",
+          "http://127.0.0.1:5000/api/locations",
           {
 
             method: "POST",
@@ -3112,7 +3123,7 @@ function App() {
     try {
 
       const response = await apiFetch(
-        "https://smart-student-bus-tracker-backend.onrender.com/api/trips/active",
+        "http://127.0.0.1:5000/api/trips/active",
         {
           method: "GET",
           headers: {
@@ -3142,6 +3153,7 @@ function App() {
         setTripId(activeTripId);
         activeTripIdRef.current = activeTripId;
         setTripStatus("IN_PROGRESS");
+        setDriverTripType(data.trip.trip_type || "PICKUP");
 
         setAttendanceMessage(
           "Active trip restored after refresh."
@@ -3332,168 +3344,112 @@ function App() {
 
 
   // ============================================================
-  // START TRIP
+  // START PICKUP / DROP TRIP
+  // The backend resolves the driver's assigned bus and route.
+  // Do not send IDs from stale frontend state.
   // ============================================================
 
-  const startTrip =
-    async () => {
+  const startTrip = async () => {
+    const token = localStorage.getItem("token");
 
-      const token =
-        localStorage.getItem(
-          "token"
-        );
+    if (!token) {
+      alert("Your session has ended. Please log in again.");
+      return;
+    }
 
+    if (tripStarting) return;
 
-      if (!token) {
+    if (tripStatus === "IN_PROGRESS") {
+      alert("A trip is already in progress. Stop it before starting another trip.");
+      return;
+    }
 
-        alert(
-          "Please login first."
-        );
+    // The current Flask trip endpoint requires all three fields.
+    // Use the IDs returned by /api/drivers/assignment, never hard-coded IDs.
+    const busId = Number(driverAssignment?.bus?.id);
+    const routeId = Number(driverAssignment?.route?.id);
+    const tripType = String(driverTripType || "PICKUP").toUpperCase();
 
+    if (!Number.isInteger(busId) || busId <= 0) {
+      const message = "No active bus is assigned to your Driver account. Ask Admin to assign a bus, then refresh your assignment.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    if (!Number.isInteger(routeId) || routeId <= 0) {
+      const message = `Bus ${driverAssignment?.bus?.bus_number || "assigned to you"} has no active route. Admin must assign a route to this bus before you can start a ${tripType.toLowerCase()} trip.`;
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    if (!["PICKUP", "DROP"].includes(tripType)) {
+      const message = "Choose Pickup or Drop before starting the trip.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+      return;
+    }
+
+    setTripStarting(true);
+    setAttendanceMessage(`Starting ${tripType.toLowerCase()} trip…`);
+
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/api/trips/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bus_id: busId,
+          route_id: routeId,
+          trip_type: tripType,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message = data.message || data.error || `Unable to start trip (${response.status}).`;
+        setAttendanceMessage(`Trip not started: ${message}`);
+        alert(message);
+
+        // A previous trip may already be active (for example after a refresh).
+        if (response.status === 409 && data.trip_id) {
+          await restoreActiveTrip();
+        }
         return;
-
       }
 
-
-      try {
-
-        const response =
-          await apiFetch(
-            "https://smart-student-bus-tracker-backend.onrender.com/api/trips/start",
-            {
-
-              method: "POST",
-
-              headers: {
-
-                "Content-Type":
-                  "application/json",
-
-                Authorization:
-                  `Bearer ${token}`,
-
-              },
-
-              body: JSON.stringify({
-
-                bus_id: 1,
-
-                route_id: 1,
-
-                trip_type:
-                  "PICKUP",
-
-              }),
-
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          alert(
-            data.message ||
-            "Unable to start trip"
-          );
-
-          return;
-
-        }
-
-
-        /*
-         * Get the actual trip ID returned
-         * from Flask.
-         */
-
-        const newTripId =
-          data.trip_id ||
-          data.trip?.id ||
-          data.id ||
-          null;
-
-
-        if (!newTripId) {
-
-          console.error(
-            "Trip API response:",
-            data
-          );
-
-
-          alert(
-            "Trip started, but the backend did not return a trip ID."
-          );
-
-          return;
-
-        }
-
-
-        /*
-         * IMPORTANT:
-         *
-         * Store the trip ID in both React state
-         * and the ref.
-         */
-
-        setTripId(
-          newTripId
-        );
-
-
-        activeTripIdRef.current =
-          newTripId;
-
-
-        setTripStatus(
-          "IN_PROGRESS"
-        );
-
-
-        setAttendanceMarked({});
-
-
-        setAttendanceMessage(
-          "Trip started successfully."
-        );
-
-
-        /*
-         * Immediately start GPS using newTripId.
-         *
-         * We do NOT wait for React's setTripId().
-         */
-
-        startDriverGPS(
-          newTripId
-        );
-
-
-        alert(
-          `Trip started successfully!\nTrip ID: ${newTripId}\nGPS starting...`
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "Start trip error:",
-          error
-        );
-
-
-        alert(
-          "Unable to connect to backend."
-        );
-
+      const newTripId = data.trip_id || data.trip?.id || data.id || null;
+      if (!newTripId) {
+        const message = data.message || "The server did not return a trip ID.";
+        setAttendanceMessage(`Trip not started: ${message}`);
+        alert(message);
+        return;
       }
 
-    };
+      setTripId(newTripId);
+      activeTripIdRef.current = newTripId;
+      setTripStatus("IN_PROGRESS");
+      setDriverTripType(data.trip_type || tripType);
+      attendanceMarkedRef.current = {};
+      setAttendanceMessage(`${data.trip_type || tripType} trip started. GPS is starting.`);
+
+      // A trip is successfully created even if the browser later denies GPS.
+      startDriverGPS(newTripId);
+      loadTodayTravelStudents();
+      alert(`${data.trip_type || tripType} trip started successfully. Trip ID: ${newTripId}`);
+    } catch (error) {
+      console.error("Start trip error:", error);
+      const message = error?.message || "Could not reach the backend. Check that Flask is running on port 5000.";
+      setAttendanceMessage(`Trip not started: ${message}`);
+      alert(message);
+    } finally {
+      setTripStarting(false);
+    }
+  };
 
 
   // ============================================================
@@ -3540,7 +3496,7 @@ function App() {
 
         const response =
           await apiFetch(
-            `https://smart-student-bus-tracker-backend.onrender.com/api/trips/${activeTripId}/stop`,
+            `http://127.0.0.1:5000/api/trips/${activeTripId}/stop`,
             {
 
               method: "POST",
@@ -3582,6 +3538,7 @@ function App() {
         setTripStatus(
           "COMPLETED"
         );
+        loadTodayTravelStudents();
 
 
         setGpsStatus(
@@ -4041,6 +3998,8 @@ function App() {
                 storageKey="smart-student-parent-map-view"
               />
 
+              {busLocation && <LiveLocationView location={busLocation} />}
+
               <Marker
                 position={[
                   17.289612892928957,
@@ -4062,7 +4021,7 @@ function App() {
                   ]}
                 >
                   <Popup>
-                    <strong>🚌 BUS001</strong>
+                    <strong>🚌 {driverAssignment?.bus?.bus_number || "Assigned bus"}</strong>
                     <br />
                     {selectedParentChild?.name || "Your child's"} school bus
                     <br />
@@ -4077,7 +4036,7 @@ function App() {
             <div className="admin-style-floating-bus">
               <div className="admin-style-bus-icon">🚌</div>
               <div>
-                <strong>BUS001</strong>
+                <strong>{selectedParentChild?.bus?.bus_number || "Bus not assigned"}</strong>
                 <span>{busLocationStatus}</span>
               </div>
               <span className={busLocation ? "live-pill live" : "live-pill"}>
@@ -4186,7 +4145,7 @@ function App() {
                 <span>📍</span>
                 <div>
                   <strong>Pickup Time</strong>
-                  <small>07:45 AM</small>
+                  <small>{selectedParentChild?.pickup_stop?.scheduled_time || "Not scheduled"}</small>
                 </div>
               </div>
 
@@ -4194,7 +4153,7 @@ function App() {
                 <span>📍</span>
                 <div>
                   <strong>Drop Time</strong>
-                  <small>03:30 PM</small>
+                  <small>{selectedParentChild?.drop_stop?.scheduled_time || "Not scheduled"}</small>
                 </div>
               </div>
 
@@ -4330,7 +4289,7 @@ function App() {
 
 
                 <p>
-                  Bus: <strong>BUS001</strong>
+                  Bus: <strong>{selectedParentChild?.bus?.bus_number || "Not assigned"}</strong>
                 </p>
 
 
@@ -4338,7 +4297,7 @@ function App() {
                   Driver:
                   {" "}
                   <strong>
-                    Ramesh Kumar
+                    {selectedParentChild?.bus?.driver_name || "Not assigned"}
                   </strong>
                 </p>
 
@@ -4347,7 +4306,7 @@ function App() {
                   Route:
                   {" "}
                   <strong>
-                    Main School Route
+                    {selectedParentChild?.bus?.route_name || "Not assigned"}
                   </strong>
                 </p>
 
@@ -4796,6 +4755,24 @@ function App() {
               <span className="header-role-text">Driver</span>
               <span className="header-chevron">⌄</span>
             </button>
+            <button
+              type="button"
+              onClick={logout}
+              title="Logout"
+              aria-label="Logout"
+              style={{
+                border: "1px solid #d7dee8",
+                borderRadius: "10px",
+                background: "#ffffff",
+                color: "#b42318",
+                padding: "10px 14px",
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ↪ Logout
+            </button>
           </div>
         </header>
 
@@ -4811,42 +4788,51 @@ function App() {
             </div>
 
             <div className="admin-style-driver-map">
-              {driverLocation ? (
+              {(driverLocation || driverAssignment?.stops?.length > 0) ? (
                 <MapContainer
-                  center={[
-                    driverLocation.latitude,
-                    driverLocation.longitude,
-                  ]}
-                  zoom={16}
+                  center={driverLocation
+                    ? [driverLocation.latitude, driverLocation.longitude]
+                    : [Number(driverAssignment.stops[0].latitude), Number(driverAssignment.stops[0].longitude)]}
+                  zoom={15}
                   className="admin-style-map"
                 >
                   <TileLayer
                     attribution="&copy; OpenStreetMap contributors"
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-
-                  <LiveLocationView location={driverLocation} />
-
-                  <Marker
-                    position={[
-                      driverLocation.latitude,
-                      driverLocation.longitude,
-                    ]}
-                  >
-                    <Popup>
-                      <strong>🚌 BUS001</strong>
-                      <br />
-                      Live driver location
-                      <br />
-                      Accuracy: ±{Math.round(driverLocation.accuracy)} m
-                    </Popup>
-                  </Marker>
+                  {driverLocation && <LiveLocationView location={driverLocation} />}
+                  {driverAssignment?.stops?.length > 0 && (
+                    <Polyline
+                      positions={driverAssignment.stops
+                        .filter((stop) => Number.isFinite(Number(stop.latitude)) && Number.isFinite(Number(stop.longitude)))
+                        .map((stop) => [Number(stop.latitude), Number(stop.longitude)])}
+                    />
+                  )}
+                  {driverAssignment?.stops?.map((stop) => (
+                    <Marker key={`stop-${stop.id}`} position={[Number(stop.latitude), Number(stop.longitude)]}>
+                      <Popup>
+                        <strong>{stop.stop_order}. {stop.stop_name}</strong>
+                        <br />{stop.stop_type || "STOP"}
+                        <br />Pickup: {stop.scheduled_pickup_time || "—"}
+                        <br />Drop: {stop.scheduled_drop_time || "—"}
+                      </Popup>
+                    </Marker>
+                  ))}
+                  {driverLocation && (
+                    <Marker position={[driverLocation.latitude, driverLocation.longitude]}>
+                      <Popup>
+                        <strong>🚌 {driverAssignment?.bus?.bus_number || "Assigned bus"}</strong>
+                        <br />Live driver location
+                        <br />Accuracy: ±{Math.round(driverLocation.accuracy)} m
+                      </Popup>
+                    </Marker>
+                  )}
                 </MapContainer>
               ) : (
                 <div className="admin-style-map-empty">
                   <div>📍</div>
-                  <strong>Waiting for live device location</strong>
-                  <p>Start the trip to begin live tracking.</p>
+                  <strong>{driverAssignmentLoading ? "Loading assigned route…" : "No route assigned"}</strong>
+                  <p>Ask Admin to assign a bus, route and route stops.</p>
                 </div>
               )}
             </div>
@@ -4854,7 +4840,7 @@ function App() {
             <div className="admin-style-floating-bus">
               <div className="admin-style-bus-icon">🚌</div>
               <div>
-                <strong>BUS001</strong>
+                <strong>{driverAssignment?.bus?.bus_number || "Bus not assigned"}</strong>
                 <span>{gpsStatus}</span>
               </div>
               <span className={tripStatus === "IN_PROGRESS" ? "live-pill live" : "live-pill"}>
@@ -4875,31 +4861,91 @@ function App() {
 
             <div className="admin-style-welcome">
               <p>DRIVER</p>
-              <h2>Good morning, Driver 👋</h2>
+              <h2>Good morning, {driverAssignment?.driver?.name || "Driver"} 👋</h2>
               <span>Manage your trip and students.</span>
             </div>
 
             <div className="admin-style-child-card driver-bus-summary">
               <div className="admin-style-child-avatar">🚌</div>
               <div>
-                <strong>BUS001</strong>
-                <span>Main School Route</span>
-                <small>Driver: Ramesh Kumar</small>
+                <strong>{driverAssignment?.bus?.bus_number || "No bus assigned"}</strong>
+                <span>{driverAssignment?.route?.route_name || "No route assigned"}</span>
+                <small>Driver: {driverAssignment?.driver?.name || "Loading driver"}</small>
               </div>
               <span className="dashboard-status coming">• ASSIGNED</span>
             </div>
 
             <div className="admin-style-trip-buttons">
               {tripStatus !== "IN_PROGRESS" ? (
-                <button className="start-trip" onClick={startTrip}>
-                  ▶ Start Trip
-                </button>
+                <>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                    Trip type
+                    <select value={driverTripType} onChange={(event) => setDriverTripType(event.target.value)} disabled={!driverAssignment?.bus?.id}>
+                      <option value="PICKUP">Pickup</option>
+                      <option value="DROP">Drop</option>
+                    </select>
+                  </label>
+                  <button className="start-trip" onClick={startTrip} disabled={tripStarting}>
+                    {tripStarting
+                      ? "Starting trip…"
+                      : `▶ Start ${driverTripType === "PICKUP" ? "Pickup" : "Drop"} Trip`}
+                  </button>
+                </>
               ) : (
-                <button className="stop-trip" onClick={stopTrip}>
-                  ■  Stop Trip
-                </button>
+                <>
+                  <p>Active trip: <strong>{driverTripType}</strong></p>
+                  <button className="stop-trip" onClick={stopTrip}>
+                    ■ Stop Trip
+                  </button>
+                </>
               )}
+              {driverAssignmentLoading && <p className="detection-status">Loading assigned bus and route…</p>}
+              {!driverAssignmentLoading && !driverAssignment?.bus && (
+                <div>
+                  <p className="detection-status">No active bus assignment found. Ask Admin to assign a bus and route.</p>
+                  <button
+                    type="button"
+                    className="camera-button"
+                    onClick={loadDriverAssignment}
+                    disabled={driverAssignmentLoading}
+                  >
+                    ↻ Refresh bus assignment
+                  </button>
+                </div>
+              )}
+              {!driverAssignmentLoading && driverAssignment?.bus && !driverAssignment?.route && (
+                <div>
+                  <p className="detection-status">Bus {driverAssignment.bus.bus_number} is assigned, but no active route is assigned. Ask Admin to assign a route before starting a trip.</p>
+                  <button
+                    type="button"
+                    className="camera-button"
+                    onClick={loadDriverAssignment}
+                    disabled={driverAssignmentLoading}
+                  >
+                    ↻ Refresh bus assignment
+                  </button>
+                </div>
+              )}
+              {attendanceMessage && <p className="detection-status" role="status">{attendanceMessage}</p>}
             </div>
+
+            {driverAssignment?.stops?.length > 0 && (
+              <div className="admin-style-driver-students" style={{ marginTop: "12px" }}>
+                <p className="section-label">Assigned Route Stops</p>
+                {driverAssignment.stops.map((stop) => (
+                  <div className="attendance-row" key={`route-stop-${stop.id}`}>
+                    <div className="attendance-item">
+                      <span className="attendance-icon">📍</span>
+                      <div>
+                        <strong>{stop.stop_order}. {stop.stop_name}</strong>
+                        <p>{stop.stop_type || "STOP"}</p>
+                      </div>
+                    </div>
+                    <span className="attendance-badge pending">{driverTripType === "PICKUP" ? (stop.scheduled_pickup_time || "—") : (stop.scheduled_drop_time || "—")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <p className="admin-style-quick-title">TODAY'S STUDENTS</p>
 
@@ -4986,19 +5032,15 @@ function App() {
                       </div>
                     </div>
 
-                    <span
-                      className={
-                        student.status === "COMING"
-                          ? "attendance-badge present"
-                          : "attendance-badge pending"
-                      }
-                    >
-                      {student.status === "COMING"
-                        ? "🟢 COMING"
-                        : student.status === "NOT_COMING"
-                          ? "🔴 NOT COMING"
-                          : "⚪ NO STATUS"}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-end" }}>
+                      <span
+                        className={student.status === "COMING" ? "attendance-badge present" : "attendance-badge pending"}
+                      >
+                        {student.status === "COMING" ? "🟢 COMING" : student.status === "NOT_COMING" ? "🔴 NOT COMING" : "⚪ NO STATUS"}
+                      </span>
+                      <small>Pickup: {student.pickup_status === "PICKED_UP" ? "✓ Picked up" : "Waiting"}</small>
+                      <small>Drop: {student.drop_status === "DROPPED_OFF" ? "✓ Dropped off" : "Waiting"}</small>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -5728,6 +5770,7 @@ function App() {
             <StopManagement
               routes={routes}
               token={localStorage.getItem("token")}
+              onRoutesChanged={loadRoutes}
             />
 
           </section>
@@ -6245,9 +6288,6 @@ function App() {
                         parent.mother_name ||
                         parent.username ||
                         "Not assigned";
-                      const busLabel = student.bus_id
-                        ? student.bus?.bus_number || `BUS ${String(student.bus_id).padStart(3, "0")}`
-                        : "Unassigned";
                       const status = String(student.status || "ACTIVE").toUpperCase();
                       const initials = String(student.name || "ST")
                         .trim()
@@ -6278,7 +6318,17 @@ function App() {
                           </div>
 
                           <div className="figma-student-cell" role="cell">
-                            <strong>{busLabel}</strong>
+                            <select
+                              aria-label={`Assign bus to ${student.name}`}
+                              value={student.bus_id ?? ""}
+                              onChange={(event) => assignStudentBus(student.id, event.target.value)}
+                              style={{ maxWidth: "160px", minWidth: "125px" }}
+                            >
+                              <option value="">Unassigned</option>
+                              {adminBuses.map((bus) => (
+                                <option key={bus.id} value={bus.id}>{bus.bus_number}</option>
+                              ))}
+                            </select>
                             <small>{student.bus_id ? "ASSIGNED" : "WAITING"}</small>
                           </div>
 
@@ -6689,7 +6739,7 @@ function App() {
                     <Popup>
 
                       <strong>
-                        🚌 BUS001
+                        🚌 Fleet bus
                       </strong>
 
                       <br />
@@ -6733,7 +6783,7 @@ function App() {
             <div>
 
               <strong>
-                🚌 BUS001
+                🚌 Fleet tracking
               </strong>
 
 

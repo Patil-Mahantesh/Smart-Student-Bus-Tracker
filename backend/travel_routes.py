@@ -312,9 +312,7 @@ def get_travel_status(student_id):
 @travel_bp.get("/today")
 @role_required("DRIVER")
 def get_today_travel_status():
-
     travel_date = request.args.get("travel_date")
-
     if not travel_date:
         return jsonify({
             "success": False,
@@ -322,71 +320,84 @@ def get_today_travel_status():
         }), 400
 
     connection = get_connection()
-
     try:
+        driver = connection.execute(
+            "SELECT id FROM drivers WHERE user_id = ?",
+            (g.user["user_id"],)
+        ).fetchone()
+        if not driver:
+            return jsonify({"success": False, "message": "Driver profile not found"}), 404
 
-        students = connection.execute(
+        assignment = connection.execute(
+            """
+            SELECT bus_id FROM driver_bus_assignments
+            WHERE driver_id = ? AND is_active = 1
+            ORDER BY id DESC LIMIT 1
+            """,
+            (driver["id"],)
+        ).fetchone()
+        if not assignment:
+            return jsonify({
+                "success": False,
+                "message": "No active bus is assigned to this driver. Contact Admin."
+            }), 409
+
+        rows = connection.execute(
             """
             SELECT
                 s.id AS student_id,
                 s.student_code,
                 s.name AS student_name,
-
-                COALESCE(
-                    ts.status,
-                    'COMING'
-                ) AS status,
-
+                COALESCE(ts.status, 'COMING') AS status,
                 ts.travel_date,
-                ts.updated_at
-
+                ts.updated_at,
+                CASE WHEN COALESCE(att.picked_up, 0) = 1 THEN 'PICKED_UP' ELSE 'WAITING' END AS pickup_status,
+                CASE WHEN COALESCE(att.dropped_off, 0) = 1 THEN 'DROPPED_OFF' ELSE 'WAITING' END AS drop_status
             FROM students s
-
             LEFT JOIN travel_status ts
-                ON ts.student_id = s.id
-                AND ts.travel_date = ?
-
-            WHERE s.is_active = 1
-
+                ON ts.student_id = s.id AND ts.travel_date = ?
+            LEFT JOIN (
+                SELECT
+                    a.student_id,
+                    MAX(CASE WHEN a.attendance_type = 'PICKUP' AND a.status = 'PRESENT' THEN 1 ELSE 0 END) AS picked_up,
+                    MAX(CASE WHEN a.attendance_type = 'DROP' AND a.status = 'PRESENT' THEN 1 ELSE 0 END) AS dropped_off
+                FROM attendance a
+                JOIN trips t ON t.id = a.trip_id
+                WHERE a.attendance_date = ? AND t.driver_id = ?
+                GROUP BY a.student_id
+            ) att ON att.student_id = s.id
+            WHERE s.is_active = 1 AND s.bus_id = ?
             ORDER BY s.name COLLATE NOCASE ASC
             """,
-            (travel_date,)
+            (travel_date, travel_date, driver["id"], assignment["bus_id"])
         ).fetchall()
 
-
-        result = []
-
-        for student in students:
-
-            result.append({
-                "student_id": student["student_id"],
-                "student_code": student["student_code"],
-                "student_name": student["student_name"],
-                "status": student["status"] or "COMING",
-                "travel_date": student["travel_date"] or travel_date,
-                "updated_at": student["updated_at"]
-            })
-
+        students = [{
+            "student_id": row["student_id"],
+            "student_code": row["student_code"],
+            "student_name": row["student_name"],
+            "status": row["status"] or "COMING",
+            "travel_date": row["travel_date"] or travel_date,
+            "updated_at": row["updated_at"],
+            "pickup_status": row["pickup_status"],
+            "drop_status": row["drop_status"]
+        } for row in rows]
 
         return jsonify({
             "success": True,
             "travel_date": travel_date,
-            "students": result,
-            "total_students": len(result)
+            "bus_id": assignment["bus_id"],
+            "students": students,
+            "total_students": len(students)
         }), 200
 
-
     except Exception as error:
-
-        print(
-            "Today's travel status error:",
-            error
-        )
-
+        connection.rollback()
+        print("Today's travel status error:", error)
         return jsonify({
             "success": False,
-            "message": "Failed to fetch today's travel status"
+            "message": "Unable to load today's bus students",
+            "error": str(error)
         }), 500
-
     finally:
         connection.close()

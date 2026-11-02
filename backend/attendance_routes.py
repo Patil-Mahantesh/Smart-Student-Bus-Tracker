@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, g
-from auth import token_required
+from auth import role_required, token_required
 from database import get_connection
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 attendance_bp = Blueprint(
@@ -16,7 +17,7 @@ attendance_bp = Blueprint(
 # =========================================================
 
 @attendance_bp.post("/mark")
-@token_required
+@role_required("DRIVER")
 def mark_attendance():
 
     data = request.get_json() or {}
@@ -96,7 +97,8 @@ def mark_attendance():
                 id,
                 student_code,
                 name,
-                is_active
+                is_active,
+                bus_id
             FROM students
             WHERE id = ?
         """, (
@@ -116,9 +118,27 @@ def mark_attendance():
                 "message": "Student is inactive"
             }), 400
 
+        if student["bus_id"] is None or student["bus_id"] != trip["bus_id"]:
+            return jsonify({
+                "success": False,
+                "message": "This student is not assigned to your bus. Attendance was not recorded."
+            }), 403
+
+        active_assignment = connection.execute(
+            """
+            SELECT 1 FROM driver_bus_assignments
+            WHERE driver_id = ? AND bus_id = ? AND is_active = 1
+            """,
+            (driver["id"], trip["bus_id"])
+        ).fetchone()
+        if not active_assignment:
+            return jsonify({
+                "success": False,
+                "message": "Your active bus assignment no longer matches this trip. Contact Admin."
+            }), 403
 
         # -------------------------------------------------
-        # 4. Check today's travel status
+        # 4. Check today's travel status (India local date)
         # -------------------------------------------------
 
         travel_status = connection.execute("""
@@ -126,9 +146,10 @@ def mark_attendance():
                 status
             FROM travel_status
             WHERE student_id = ?
-              AND travel_date = DATE('now')
+              AND travel_date = ?
         """, (
             student_id,
+            datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat(),
         )).fetchone()
 
 
@@ -243,14 +264,9 @@ def mark_attendance():
         # 7. Record attendance
         # -------------------------------------------------
 
-        recognized_at = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-
-        attendance_date = datetime.now().strftime(
-            "%Y-%m-%d"
-        )
+        local_now = datetime.now(ZoneInfo("Asia/Kolkata"))
+        recognized_at = local_now.strftime("%Y-%m-%d %H:%M:%S")
+        attendance_date = local_now.date().isoformat()
 
 
         cursor = connection.execute("""
@@ -329,7 +345,7 @@ def mark_attendance():
                 f"{student['name']} has boarded "
                 "the bus successfully. "
                 "Pickup attendance recorded at "
-                f"{datetime.now().strftime('%I:%M %p')}."
+                f"{local_now.strftime('%I:%M %p')} IST."
             )
 
         else:
@@ -342,7 +358,7 @@ def mark_attendance():
                 f"{student['name']} has reached "
                 "the drop location. "
                 "Drop attendance recorded at "
-                f"{datetime.now().strftime('%I:%M %p')}."
+                f"{local_now.strftime('%I:%M %p')} IST."
             )
 
 

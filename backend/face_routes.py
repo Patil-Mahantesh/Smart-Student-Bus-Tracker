@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, g
-from auth import token_required
+from auth import role_required, token_required
 from database import get_connection
 from insightface.app import FaceAnalysis
 
@@ -146,6 +146,8 @@ def detect_faces():
 
 
         inference_frame = resize_for_inference(frame)
+        scale_x = frame.shape[1] / inference_frame.shape[1]
+        scale_y = frame.shape[0] / inference_frame.shape[0]
 
         faces = get_face_app().get(
             inference_frame
@@ -162,10 +164,10 @@ def detect_faces():
             ).tolist()
 
 
-            x1 = bbox[0]
-            y1 = bbox[1]
-            x2 = bbox[2]
-            y2 = bbox[3]
+            x1 = int(bbox[0] * scale_x)
+            y1 = int(bbox[1] * scale_y)
+            x2 = int(bbox[2] * scale_x)
+            y2 = int(bbox[3] * scale_y)
 
 
             detected_faces.append({
@@ -195,10 +197,10 @@ def detect_faces():
                 detected_faces,
 
             "image_width":
-                int(inference_frame.shape[1]),
+                int(frame.shape[1]),
 
             "image_height":
-                int(inference_frame.shape[0])
+                int(frame.shape[0])
 
         }), 200
 
@@ -228,7 +230,7 @@ def detect_faces():
 # ============================================================
 
 @face_bp.post("/recognize")
-@token_required
+@role_required("DRIVER")
 def recognize_face():
 
     data = request.get_json() or {}
@@ -279,6 +281,8 @@ def recognize_face():
         # ----------------------------------------------------
 
         inference_frame = resize_for_inference(frame)
+        scale_x = frame.shape[1] / inference_frame.shape[1]
+        scale_y = frame.shape[0] / inference_frame.shape[0]
 
         faces = get_face_app().get(
             inference_frame
@@ -305,6 +309,24 @@ def recognize_face():
         # Load registered embeddings
         # ----------------------------------------------------
 
+        driver_assignment = connection.execute(
+            """
+            SELECT dba.bus_id
+            FROM drivers d
+            JOIN driver_bus_assignments dba ON dba.driver_id = d.id
+            WHERE d.user_id = ? AND dba.is_active = 1
+            ORDER BY dba.id DESC
+            LIMIT 1
+            """,
+            (g.user["user_id"],)
+        ).fetchone()
+
+        if not driver_assignment:
+            return jsonify({
+                "success": False,
+                "message": "No active bus is assigned to this driver. Contact Admin."
+            }), 409
+
         rows = connection.execute(
             """
             SELECT
@@ -316,11 +338,12 @@ def recognize_face():
                 s.student_code,
                 s.name
             FROM face_embeddings fe
-            INNER JOIN students s
-                ON s.id = fe.student_id
+            INNER JOIN students s ON s.id = fe.student_id
             WHERE fe.is_active = 1
               AND s.is_active = 1
-            """
+              AND s.bus_id = ?
+            """,
+            (driver_assignment["bus_id"],)
         ).fetchall()
 
 
@@ -413,10 +436,10 @@ def recognize_face():
             ).tolist()
 
 
-            x1 = bbox[0]
-            y1 = bbox[1]
-            x2 = bbox[2]
-            y2 = bbox[3]
+            x1 = int(bbox[0] * scale_x)
+            y1 = int(bbox[1] * scale_y)
+            x2 = int(bbox[2] * scale_x)
+            y2 = int(bbox[3] * scale_y)
 
 
             # ------------------------------------------------

@@ -1,22 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
 .env
 .env.*
 !.env.example
-__pycache__/
-*.py[cod]
-*.log
-.pytest_cache/
-.coverage
-htmlcov/
-.venv/
-venv/
-env/
+
+# Local databases and uploaded face data
 *.db
 *.sqlite
 *.sqlite3
 backend/uploads/
-frontend/node_modules/
-frontend/dist/
+backend/face_uploads/
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Tooling / OS
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
-Thumbs.db
-desktop.ini

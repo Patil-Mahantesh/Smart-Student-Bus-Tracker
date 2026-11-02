@@ -103,7 +103,26 @@ def get_buses():
 
                 r.id AS route_id,
                 r.route_name,
-                r.route_code
+                r.route_code,
+
+                (SELECT t.id FROM trips t
+                 WHERE t.bus_id = b.id AND t.status = 'IN_PROGRESS'
+                 ORDER BY t.id DESC LIMIT 1) AS active_trip_id,
+                (SELECT t.trip_type FROM trips t
+                 WHERE t.bus_id = b.id AND t.status = 'IN_PROGRESS'
+                 ORDER BY t.id DESC LIMIT 1) AS active_trip_type,
+                (SELECT bl.latitude FROM bus_locations bl
+                 JOIN trips t ON t.id = bl.trip_id
+                 WHERE t.bus_id = b.id AND t.status = 'IN_PROGRESS'
+                 ORDER BY bl.recorded_at DESC, bl.id DESC LIMIT 1) AS latitude,
+                (SELECT bl.longitude FROM bus_locations bl
+                 JOIN trips t ON t.id = bl.trip_id
+                 WHERE t.bus_id = b.id AND t.status = 'IN_PROGRESS'
+                 ORDER BY bl.recorded_at DESC, bl.id DESC LIMIT 1) AS longitude,
+                (SELECT bl.recorded_at FROM bus_locations bl
+                 JOIN trips t ON t.id = bl.trip_id
+                 WHERE t.bus_id = b.id AND t.status = 'IN_PROGRESS'
+                 ORDER BY bl.recorded_at DESC, bl.id DESC LIMIT 1) AS recorded_at
 
             FROM buses b
 

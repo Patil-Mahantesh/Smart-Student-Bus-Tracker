@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 from auth_routes import auth_bp
@@ -34,16 +34,7 @@ if Config.ENV == "production":
 # Restrict cross-origin requests to configured frontend origins.
 CORS(
     app,
-    resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5177",
-                "https://smart-student-bus-tracker.onrender.com"
-            ]
-        }
-    },
+    resources={r"/api/*": {"origins": Config.CORS_ORIGINS}},
     supports_credentials=True
 )
 

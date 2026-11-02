@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, g
 
-from auth import token_required
+from auth import role_required, token_required
 from database import get_connection
 
 
@@ -11,12 +11,40 @@ location_bp = Blueprint(
 )
 
 
+def _can_view_bus(connection, bus_id):
+    role = g.user.get("role")
+    if role == "ADMIN":
+        return True
+    if role == "DRIVER":
+        return bool(connection.execute(
+            """
+            SELECT 1
+            FROM drivers d
+            JOIN driver_bus_assignments a ON a.driver_id = d.id
+            WHERE d.user_id = ? AND a.bus_id = ? AND a.is_active = 1
+            """,
+            (g.user["user_id"], bus_id)
+        ).fetchone())
+    if role == "PARENT":
+        return bool(connection.execute(
+            """
+            SELECT 1
+            FROM parents p
+            JOIN student_parents sp ON sp.parent_id = p.id
+            JOIN students s ON s.id = sp.student_id
+            WHERE p.user_id = ? AND s.bus_id = ?
+            """,
+            (g.user["user_id"], bus_id)
+        ).fetchone())
+    return False
+
+
 # ============================================================
 # RECORD DRIVER GPS LOCATION
 # ============================================================
 
 @location_bp.post("")
-@token_required
+@role_required("DRIVER")
 def record_location():
 
     data = request.get_json(silent=True) or {}
@@ -71,6 +99,7 @@ def record_location():
             """
             SELECT
                 id,
+                bus_id,
                 driver_id,
                 status
             FROM trips
@@ -94,6 +123,16 @@ def record_location():
             return jsonify({
                 "success": False,
                 "message": "You are not assigned to this trip"
+            }), 403
+
+        active_assignment = connection.execute(
+            "SELECT 1 FROM driver_bus_assignments WHERE driver_id = ? AND bus_id = ? AND is_active = 1",
+            (driver_id, trip["bus_id"])
+        ).fetchone()
+        if not active_assignment:
+            return jsonify({
+                "success": False,
+                "message": "Your active bus assignment no longer matches this trip. Contact Admin."
             }), 403
 
         # ----------------------------------------------------
@@ -199,6 +238,22 @@ def get_latest_location(trip_id):
     connection = get_connection()
 
     try:
+        trip = connection.execute(
+            "SELECT id, bus_id, driver_id FROM trips WHERE id = ?",
+            (trip_id,)
+        ).fetchone()
+        if not trip:
+            return jsonify({"success": False, "message": "Trip not found"}), 404
+
+        if not _can_view_bus(connection, trip["bus_id"]):
+            return jsonify({"success": False, "message": "You are not authorized to view this bus location"}), 403
+        if g.user.get("role") == "DRIVER":
+            driver = connection.execute(
+                "SELECT id FROM drivers WHERE user_id = ?",
+                (g.user["user_id"],)
+            ).fetchone()
+            if not driver or driver["id"] != trip["driver_id"]:
+                return jsonify({"success": False, "message": "You are not authorized to view this trip"}), 403
 
         location = connection.execute(
             """
@@ -270,6 +325,11 @@ def get_latest_bus_location(bus_id):
     connection = get_connection()
 
     try:
+        if not _can_view_bus(connection, bus_id):
+            return jsonify({
+                "success": False,
+                "message": "You are not authorized to view this bus location"
+            }), 403
 
         location = connection.execute(
             """

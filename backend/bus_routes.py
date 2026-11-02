@@ -92,9 +92,9 @@ def assign_driver(bus_id):
             UPDATE driver_bus_assignments
             SET is_active = 0,
                 assigned_until = CURRENT_TIMESTAMP
-            WHERE driver_id = ? AND is_active = 1
+            WHERE (driver_id = ? OR bus_id = ?) AND is_active = 1
             """,
-            (driver_id,)
+            (driver_id, bus_id)
         )
 
         cursor = connection.execute(

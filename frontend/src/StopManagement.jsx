@@ -1,4 +1,4 @@
-﻿﻿/*
+/*
   StopManagement.jsx
 
   Map-based Stop Management for Admin.
@@ -48,6 +48,8 @@ const DEFAULT_CENTER = [
   17.3297,
   76.8343,
 ];
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
 
 
 // ------------------------------------------------------------
@@ -150,6 +152,7 @@ function ResponsiveMapSize() {
 export default function StopManagement({
   routes = [],
   token,
+  onRoutesChanged,
 }) {
 
   const [stops, setStops] =
@@ -186,6 +189,11 @@ export default function StopManagement({
   const [error, setError] =
     useState("");
 
+  const [routeFormOpen, setRouteFormOpen] = useState(false);
+  const [newRouteName, setNewRouteName] = useState("");
+  const [newRouteCode, setNewRouteCode] = useState("");
+  const [newRouteDescription, setNewRouteDescription] = useState("");
+
 
   // ----------------------------------------------------------
   // Load stops
@@ -201,7 +209,7 @@ export default function StopManagement({
 
       const response =
         await fetch(
-          "https://smart-student-bus-tracker-backend.onrender.com/api/stops",
+          `${API_BASE}/api/stops`,
           {
             headers: {
               Authorization:
@@ -384,8 +392,8 @@ export default function StopManagement({
 
       const url =
         editingStopId
-          ? `https://smart-student-bus-tracker-backend.onrender.com/api/stops/${editingStopId}`
-          : "https://smart-student-bus-tracker-backend.onrender.com/api/stops";
+          ? `${API_BASE}/api/stops/${editingStopId}`
+          : `${API_BASE}/api/stops`;
 
       const response =
         await fetch(
@@ -486,7 +494,7 @@ export default function StopManagement({
 
       const response =
         await fetch(
-          `https://smart-student-bus-tracker-backend.onrender.com/api/stops/${stop.id}`,
+          `${API_BASE}/api/stops/${stop.id}`,
           {
             method: "DELETE",
 
@@ -531,6 +539,46 @@ export default function StopManagement({
 
     }
 
+  };
+
+
+  const createRoute = async (event) => {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (!newRouteName.trim()) {
+      setError("Enter a route name.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/routes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          route_name: newRouteName.trim(),
+          route_code: newRouteCode.trim().toUpperCase(),
+          description: newRouteDescription.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to create route.");
+      setMessage(data.message || "Route created successfully.");
+      setNewRouteName("");
+      setNewRouteCode("");
+      setNewRouteDescription("");
+      setRouteFormOpen(false);
+      await onRoutesChanged?.();
+      const createdRouteId = data.data?.id || data.route?.id || data.id || data.route_id;
+      if (createdRouteId) setSelectedRouteId(String(createdRouteId));
+    } catch (createError) {
+      setError(createError.message || "Unable to create route.");
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -596,6 +644,23 @@ export default function StopManagement({
           >
             Manage Stops
           </h2>
+
+          <button
+            type="button"
+            onClick={() => setRouteFormOpen((open) => !open)}
+            style={{ marginTop: "12px", border: 0, borderRadius: "9px", padding: "10px 12px", background: "#2563eb", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+          >
+            {routeFormOpen ? "Close Add Route" : "+ Create Route"}
+          </button>
+
+          {routeFormOpen && (
+            <form onSubmit={createRoute} style={{ marginTop: "12px", display: "grid", gap: "8px" }}>
+              <input value={newRouteName} onChange={(event) => setNewRouteName(event.target.value)} placeholder="Route name" required />
+              <input value={newRouteCode} onChange={(event) => setNewRouteCode(event.target.value)} placeholder="Unique route code (e.g. RTE-001)" required />
+              <input value={newRouteDescription} onChange={(event) => setNewRouteDescription(event.target.value)} placeholder="Description (optional)" />
+              <button type="submit" disabled={loading}>{loading ? "Saving…" : "Save Route"}</button>
+            </form>
+          )}
 
         </div>
 

@@ -201,14 +201,20 @@ def get_my_children():
                 b.registration_number,
                 b.capacity,
                 b.status AS bus_status,
+                r.id AS route_id,
+                r.route_name,
+                r.route_code,
+                d.name AS driver_name,
 
                 pickup.stop_name AS pickup_stop_name,
                 pickup.latitude AS pickup_latitude,
                 pickup.longitude AS pickup_longitude,
+                pickup.scheduled_pickup_time AS scheduled_pickup_time,
 
                 dropoff.stop_name AS drop_stop_name,
                 dropoff.latitude AS drop_latitude,
-                dropoff.longitude AS drop_longitude
+                dropoff.longitude AS drop_longitude,
+                dropoff.scheduled_drop_time AS scheduled_drop_time
 
             FROM student_parents sp
 
@@ -223,6 +229,24 @@ def get_my_children():
 
             LEFT JOIN stops dropoff
                 ON dropoff.id = s.drop_stop_id
+
+            LEFT JOIN bus_route_assignments bra
+                ON bra.bus_id = s.bus_id AND bra.is_active = 1
+                AND bra.id = (
+                    SELECT MAX(bra2.id)
+                    FROM bus_route_assignments bra2
+                    WHERE bra2.bus_id = s.bus_id AND bra2.is_active = 1
+                )
+            LEFT JOIN routes r ON r.id = bra.route_id
+
+            LEFT JOIN driver_bus_assignments dba
+                ON dba.bus_id = s.bus_id AND dba.is_active = 1
+                AND dba.id = (
+                    SELECT MAX(dba2.id)
+                    FROM driver_bus_assignments dba2
+                    WHERE dba2.bus_id = s.bus_id AND dba2.is_active = 1
+                )
+            LEFT JOIN drivers d ON d.id = dba.driver_id
 
             WHERE sp.parent_id = ?
 
@@ -244,7 +268,11 @@ def get_my_children():
                     "bus_number": child["bus_number"],
                     "registration_number": child["registration_number"],
                     "capacity": child["capacity"],
-                    "status": child["bus_status"]
+                    "status": child["bus_status"],
+                    "route_id": child["route_id"],
+                    "route_name": child["route_name"],
+                    "route_code": child["route_code"],
+                    "driver_name": child["driver_name"]
                 }
 
             child["pickup_stop"] = None
@@ -254,7 +282,8 @@ def get_my_children():
                     "id": child["pickup_stop_id"],
                     "name": child["pickup_stop_name"],
                     "latitude": child["pickup_latitude"],
-                    "longitude": child["pickup_longitude"]
+                    "longitude": child["pickup_longitude"],
+                    "scheduled_time": child["scheduled_pickup_time"]
                 }
 
             child["drop_stop"] = None
@@ -264,7 +293,8 @@ def get_my_children():
                     "id": child["drop_stop_id"],
                     "name": child["drop_stop_name"],
                     "latitude": child["drop_latitude"],
-                    "longitude": child["drop_longitude"]
+                    "longitude": child["drop_longitude"],
+                    "scheduled_time": child["scheduled_drop_time"]
                 }
 
             # Remove flattened fields that are already represented
@@ -279,7 +309,12 @@ def get_my_children():
                 "pickup_longitude",
                 "drop_stop_name",
                 "drop_latitude",
-                "drop_longitude"
+                "drop_longitude",
+                "scheduled_pickup_time",
+                "scheduled_drop_time",
+                "route_name",
+                "route_code",
+                "driver_name"
             ):
                 child.pop(key, None)
 

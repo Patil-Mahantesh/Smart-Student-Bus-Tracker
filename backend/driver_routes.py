@@ -1,15 +1,26 @@
-from auth import role_required, token_required
 from flask import Blueprint, request, jsonify, g
 from werkzeug.security import generate_password_hash
+
+from auth import role_required
 from database import get_connection
 
-driver_bp = Blueprint("driver", __name__, url_prefix="/api/drivers")
 
+driver_bp = Blueprint(
+    "driver",
+    __name__,
+    url_prefix="/api/drivers"
+)
+
+
+# ============================================================
+# CREATE DRIVER
+# ============================================================
 
 @driver_bp.post("")
 @role_required("ADMIN")
 def create_driver():
-    data = request.get_json()
+
+    data = request.get_json(silent=True) or {}
 
     username = data.get("username")
     password = data.get("password")
@@ -19,17 +30,23 @@ def create_driver():
 
     if not username or not password or not name:
         return jsonify({
-            "message": "username, password and name are required"
+            "success": False,
+            "message": "Username, password and name are required."
         }), 400
 
     connection = get_connection()
 
     try:
+
         password_hash = generate_password_hash(password)
 
         cursor = connection.execute(
             """
-            INSERT INTO users (username, password_hash, role)
+            INSERT INTO users (
+                username,
+                password_hash,
+                role
+            )
             VALUES (?, ?, ?)
             """,
             (username, password_hash, "DRIVER")
@@ -39,11 +56,20 @@ def create_driver():
 
         cursor = connection.execute(
             """
-            INSERT INTO drivers
-            (user_id, name, phone, license_number)
+            INSERT INTO drivers (
+                user_id,
+                name,
+                phone,
+                license_number
+            )
             VALUES (?, ?, ?, ?)
             """,
-            (user_id, name, phone, license_number)
+            (
+                user_id,
+                name,
+                phone,
+                license_number
+            )
         )
 
         driver_id = cursor.lastrowid
@@ -51,15 +77,18 @@ def create_driver():
         connection.commit()
 
         return jsonify({
-            "message": "Driver created successfully",
+            "success": True,
+            "message": "Driver created successfully.",
             "driver_id": driver_id
         }), 201
 
     except Exception as error:
+
         connection.rollback()
 
         return jsonify({
-            "message": "Could not create driver",
+            "success": False,
+            "message": "Could not create driver.",
             "error": str(error)
         }), 409
 
@@ -67,76 +96,269 @@ def create_driver():
         connection.close()
 
 
+# ============================================================
+# GET LOGGED-IN DRIVER ASSIGNMENT
+# BUS + ROUTE + ROUTE STOPS
+# ============================================================
+
 @driver_bp.get("/assignment")
-@token_required
+@role_required("DRIVER")
 def get_driver_assignment():
+
     connection = get_connection()
 
     try:
-        user_id = g.user["user_id"]
+
+        # ----------------------------------------------------
+        # 1. GET LOGGED-IN DRIVER
+        # ----------------------------------------------------
 
         driver = connection.execute(
-            "SELECT id FROM drivers WHERE user_id = ?",
-            (user_id,)
+            """
+            SELECT
+                id,
+                name,
+                phone,
+                license_number
+            FROM drivers
+            WHERE user_id = ?
+              AND is_active = 1
+            LIMIT 1
+            """,
+            (g.user["user_id"],)
         ).fetchone()
 
         if not driver:
+
             return jsonify({
-                "message": "Driver profile not found"
+                "success": False,
+                "message": "Driver profile not found or inactive.",
+                "driver": None,
+                "bus": None,
+                "route": None,
+                "stops": [],
+                "has_active_route": False
             }), 404
 
-        driver_id = driver["id"]
-        result = connection.execute(
+        driver_data = dict(driver)
+
+        # ----------------------------------------------------
+        # 2. GET DRIVER'S ACTIVE BUS
+        # ----------------------------------------------------
+
+        bus_assignment = connection.execute(
             """
             SELECT
-                d.id AS driver_id,
-                d.name AS driver_name,
-                d.phone,
-                d.license_number,
+                dba.id AS assignment_id,
+                dba.assigned_from,
+                dba.assigned_until,
+                dba.is_active AS assignment_is_active,
+
                 b.id AS bus_id,
                 b.bus_number,
                 b.registration_number,
                 b.capacity,
                 b.status AS bus_status,
-                a.assigned_from,
-                a.assigned_until,
-                a.is_active
-            FROM driver_bus_assignments a
-            JOIN drivers d ON d.id = a.driver_id
-            JOIN buses b ON b.id = a.bus_id
-            WHERE a.driver_id = ?
-              AND a.is_active = 1
-            ORDER BY a.id DESC
+                b.is_active AS bus_is_active
+
+            FROM driver_bus_assignments dba
+
+            JOIN buses b
+                ON b.id = dba.bus_id
+
+            WHERE dba.driver_id = ?
+              AND dba.is_active = 1
+              AND b.is_active = 1
+
+            ORDER BY dba.id DESC
             LIMIT 1
             """,
-            (driver_id,)
+            (driver["id"],)
         ).fetchone()
 
-        if not result:
+        if not bus_assignment:
+
             return jsonify({
-                "message": "No active bus assignment found"
-            }), 404
+                "success": False,
+                "message": "No active bus assigned to this driver.",
+                "driver": driver_data,
+                "bus": None,
+                "route": None,
+                "stops": [],
+                "has_active_route": False
+            }), 200
+
+        bus_id = bus_assignment["bus_id"]
+
+        bus_data = {
+            "id": bus_id,
+            "bus_number": bus_assignment["bus_number"],
+            "registration_number": bus_assignment["registration_number"],
+            "capacity": bus_assignment["capacity"],
+            "status": bus_assignment["bus_status"]
+        }
+
+        # ----------------------------------------------------
+        # 3. GET BUS'S LATEST ACTIVE ROUTE ASSIGNMENT
+        # ----------------------------------------------------
+
+        route_assignment = connection.execute(
+            """
+            SELECT
+                id,
+                route_id,
+                assigned_from,
+                assigned_until,
+                is_active
+
+            FROM bus_route_assignments
+
+            WHERE bus_id = ?
+              AND is_active = 1
+
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (bus_id,)
+        ).fetchone()
+
+        route_data = None
+        stops_data = []
+
+        route_assignment_data = None
+
+        # ----------------------------------------------------
+        # 4. GET ROUTE DETAILS
+        # ----------------------------------------------------
+
+        if route_assignment:
+
+            route_assignment_data = {
+                "id": route_assignment["id"],
+                "route_id": route_assignment["route_id"],
+                "assigned_from": route_assignment["assigned_from"],
+                "assigned_until": route_assignment["assigned_until"],
+                "is_active": bool(route_assignment["is_active"])
+            }
+
+            route = connection.execute(
+                """
+                SELECT
+                    id,
+                    route_name,
+                    route_code,
+                    is_active
+
+                FROM routes
+
+                WHERE id = ?
+                  AND is_active = 1
+
+                LIMIT 1
+                """,
+                (route_assignment["route_id"],)
+            ).fetchone()
+
+            if route:
+
+                route_data = {
+                    "id": route["id"],
+                    "route_name": route["route_name"],
+                    "route_code": route["route_code"]
+                }
+
+                # ------------------------------------------------
+                # 5. GET ACTIVE ROUTE STOPS
+                # ------------------------------------------------
+
+                stops = connection.execute(
+                    """
+                    SELECT
+                        id,
+                        route_id,
+                        stop_name,
+                        stop_type,
+                        latitude,
+                        longitude,
+                        stop_order,
+                        scheduled_pickup_time,
+                        scheduled_drop_time
+
+                    FROM stops
+
+                    WHERE route_id = ?
+                      AND is_active = 1
+
+                    ORDER BY stop_order ASC, id ASC
+                    """,
+                    (route["id"],)
+                ).fetchall()
+
+                stops_data = [
+                    dict(stop)
+                    for stop in stops
+                ]
+
+        # ----------------------------------------------------
+        # 6. RETURN COMPLETE DRIVER ASSIGNMENT
+        # ----------------------------------------------------
+
+        connection.commit()
 
         return jsonify({
-            "driver": {
-                "id": result["driver_id"],
-                "name": result["driver_name"],
-                "phone": result["phone"],
-                "license_number": result["license_number"]
-            },
-            "bus": {
-                "id": result["bus_id"],
-                "bus_number": result["bus_number"],
-                "registration_number": result["registration_number"],
-                "capacity": result["capacity"],
-                "status": result["bus_status"]
-            },
+
+            "success": True,
+
+            "driver": driver_data,
+
+            "bus": bus_data,
+
+            "route": route_data,
+
+            "stops": stops_data,
+
+            "has_active_route": route_data is not None,
+
             "assignment": {
-                "assigned_from": result["assigned_from"],
-                "assigned_until": result["assigned_until"],
-                "is_active": result["is_active"]
-            }
+
+                "id": bus_assignment["assignment_id"],
+
+                "assigned_from": bus_assignment["assigned_from"],
+
+                "assigned_until": bus_assignment["assigned_until"],
+
+                "is_active": bool(
+                    bus_assignment["assignment_is_active"]
+                ),
+
+                "route_assignment": route_assignment_data
+            },
+
+            "assignment_api_version": "2026-11-02-v2"
+
         }), 200
 
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "Driver assignment API error:",
+            repr(error)
+        )
+
+        return jsonify({
+
+            "success": False,
+
+            "message": "Unable to load driver assignment.",
+
+            "error": str(error),
+
+            "assignment_api_version": "2026-11-02-v2"
+
+        }), 500
+
     finally:
+
         connection.close()

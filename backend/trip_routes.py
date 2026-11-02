@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify, g
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from database import get_connection
 from auth import role_required
@@ -18,140 +20,118 @@ trip_bp = Blueprint(
 @trip_bp.post("/start")
 @role_required("DRIVER")
 def start_trip():
+    data = request.get_json(silent=True) or {}
+    trip_type = str(data.get("trip_type", "")).upper()
 
-    data = request.get_json() or {}
-
-    bus_id = data.get("bus_id")
-    route_id = data.get("route_id")
-    trip_type = data.get("trip_type")
-
-    if not bus_id or not route_id or not trip_type:
+    if trip_type not in ("PICKUP", "DROP"):
         return jsonify({
-            "message": "bus_id, route_id and trip_type are required"
-        }), 400
-
-    if trip_type not in ["PICKUP", "DROP"]:
-        return jsonify({
-            "message": "Invalid trip type"
+            "success": False,
+            "message": "Choose either PICKUP or DROP before starting the trip."
         }), 400
 
     connection = get_connection()
-
     try:
-
         driver = connection.execute(
-            """
-            SELECT id, name
-            FROM drivers
-            WHERE user_id = ?
-            """,
+            "SELECT id, name FROM drivers WHERE user_id = ?",
             (g.user["user_id"],)
         ).fetchone()
-
         if not driver:
-            return jsonify({
-                "message": "Driver profile not found"
-            }), 404
+            return jsonify({"success": False, "message": "Driver profile not found"}), 404
 
-        driver_id = driver["id"]
+        assignment = connection.execute(
+            """
+            SELECT
+                b.id AS bus_id,
+                b.bus_number,
+                b.status AS bus_status,
+                b.is_active AS bus_active,
+                r.id AS route_id,
+                r.route_name,
+                r.is_active AS route_active
+            FROM driver_bus_assignments dba
+            JOIN buses b ON b.id = dba.bus_id
+            LEFT JOIN bus_route_assignments bra
+                ON bra.bus_id = b.id AND bra.is_active = 1
+                AND bra.id = (
+                    SELECT MAX(bra2.id)
+                    FROM bus_route_assignments bra2
+                    WHERE bra2.bus_id = b.id AND bra2.is_active = 1
+                )
+            LEFT JOIN routes r ON r.id = bra.route_id
+            WHERE dba.driver_id = ? AND dba.is_active = 1
+            ORDER BY dba.id DESC
+            LIMIT 1
+            """,
+            (driver["id"],)
+        ).fetchone()
+
+        if not assignment:
+            return jsonify({
+                "success": False,
+                "message": "No active bus is assigned to this driver. Contact Admin."
+            }), 409
+        if not assignment["route_id"] or not assignment["route_active"]:
+            return jsonify({
+                "success": False,
+                "message": "No active route is assigned to your bus. Contact Admin."
+            }), 409
+        if not assignment["bus_active"] or str(assignment["bus_status"]).upper() != "ACTIVE":
+            return jsonify({
+                "success": False,
+                "message": "Your assigned bus is not active. Contact Admin."
+            }), 409
+
+        requested_bus_id = data.get("bus_id")
+        requested_route_id = data.get("route_id")
+        if requested_bus_id not in (None, "") and int(requested_bus_id) != assignment["bus_id"]:
+            return jsonify({"success": False, "message": "You can only start a trip using your assigned bus."}), 403
+        if requested_route_id not in (None, "") and int(requested_route_id) != assignment["route_id"]:
+            return jsonify({"success": False, "message": "You can only start a trip using your bus's assigned route."}), 403
 
         active_trip = connection.execute(
             """
-            SELECT id
-            FROM trips
-            WHERE driver_id = ?
-              AND status = 'IN_PROGRESS'
+            SELECT id FROM trips
+            WHERE driver_id = ? AND status = 'IN_PROGRESS'
+            ORDER BY id DESC LIMIT 1
             """,
-            (driver_id,)
+            (driver["id"],)
         ).fetchone()
-
         if active_trip:
             return jsonify({
+                "success": False,
                 "message": "Driver already has an active trip",
                 "trip_id": active_trip["id"]
             }), 409
 
-        bus = connection.execute(
-            """
-            SELECT id, bus_number
-            FROM buses
-            WHERE id = ?
-            """,
-            (bus_id,)
-        ).fetchone()
-
-        if not bus:
-            return jsonify({
-                "message": "Bus not found"
-            }), 404
-
-        route = connection.execute(
-            """
-            SELECT id, route_name
-            FROM routes
-            WHERE id = ?
-            """,
-            (route_id,)
-        ).fetchone()
-
-        if not route:
-            return jsonify({
-                "message": "Route not found"
-            }), 404
-
+        trip_date = datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat()
         cursor = connection.execute(
             """
             INSERT INTO trips
-            (
-                bus_id,
-                route_id,
-                driver_id,
-                trip_type,
-                status,
-                started_at
-            )
-            VALUES (?, ?, ?, ?, 'IN_PROGRESS', CURRENT_TIMESTAMP)
+                (bus_id, route_id, driver_id, trip_type, status, trip_date, started_at)
+            VALUES (?, ?, ?, ?, 'IN_PROGRESS', ?, CURRENT_TIMESTAMP)
             """,
-            (
-                bus_id,
-                route_id,
-                driver_id,
-                trip_type
-            )
+            (assignment["bus_id"], assignment["route_id"], driver["id"], trip_type, trip_date)
         )
-
         connection.commit()
 
         return jsonify({
+            "success": True,
             "message": "Trip started successfully",
             "trip_id": cursor.lastrowid,
             "trip_type": trip_type,
             "status": "IN_PROGRESS",
-            "bus": {
-                "id": bus["id"],
-                "bus_number": bus["bus_number"]
-            },
-            "route": {
-                "id": route["id"],
-                "route_name": route["route_name"]
-            },
-            "driver": {
-                "id": driver["id"],
-                "name": driver["name"]
-            }
+            "bus": {"id": assignment["bus_id"], "bus_number": assignment["bus_number"]},
+            "route": {"id": assignment["route_id"], "route_name": assignment["route_name"]},
+            "driver": {"id": driver["id"], "name": driver["name"]}
         }), 201
 
-    except Exception as error:
-
+    except (TypeError, ValueError):
         connection.rollback()
-
-        return jsonify({
-            "message": "Failed to start trip",
-            "error": str(error)
-        }), 500
-
+        return jsonify({"success": False, "message": "Invalid bus or route assignment."}), 400
+    except Exception as error:
+        connection.rollback()
+        return jsonify({"success": False, "message": "Failed to start trip", "error": str(error)}), 500
     finally:
-
         connection.close()
 
 
@@ -212,6 +192,17 @@ def get_active_trip():
                 "trip": None
             }), 200
 
+        stops = [dict(row) for row in connection.execute(
+            """
+            SELECT id, route_id, stop_name, stop_type, latitude, longitude,
+                   stop_order, scheduled_pickup_time, scheduled_drop_time
+            FROM stops
+            WHERE route_id = ? AND is_active = 1
+            ORDER BY stop_order ASC, id ASC
+            """,
+            (trip["route_id"],)
+        ).fetchall()]
+
         return jsonify({
             "active": True,
             "trip": {
@@ -223,7 +214,8 @@ def get_active_trip():
                 "status": trip["status"],
                 "started_at": trip["started_at"],
                 "bus_number": trip["bus_number"],
-                "route_name": trip["route_name"]
+                "route_name": trip["route_name"],
+                "stops": stops
             }
         }), 200
 

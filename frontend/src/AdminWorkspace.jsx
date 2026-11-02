@@ -45,7 +45,7 @@ const PAGE_META = {
     eyebrow: "FLEET OPERATIONS",
     title: "Bus management",
     description:
-      "Maintain vehicle records and assign drivers to active buses.",
+      "Register buses, assign each bus a route and driver, and monitor the fleet.",
     icon: "🚌",
   },
 
@@ -198,6 +198,7 @@ export default function AdminWorkspace({
 
   const [buses, setBuses] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [routes, setRoutes] = useState([]);
   const [parents, setParents] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -258,15 +259,17 @@ export default function AdminWorkspace({
       try {
         switch (selectedMenu) {
           case "buses": {
-            const [busData, driverData] = await Promise.all([
+            const [busData, driverData, routeData] = await Promise.all([
               adminRequest("/api/admin/buses", token),
               adminRequest("/api/admin/drivers", token),
+              adminRequest("/api/admin/routes", token),
             ]);
 
             if (cancelled) return;
 
             setBuses(busData.buses || []);
             setDrivers(driverData.drivers || []);
+            setRoutes(routeData.routes || []);
 
             break;
           }
@@ -310,17 +313,15 @@ export default function AdminWorkspace({
             setBuses(list);
 
             const preferred =
-              list.find(
-                (bus) =>
-                  String(bus.id) === String(selectedBusId)
-              ) || list[0];
+              list.find((bus) => String(bus.id) === String(selectedBusId)) ||
+              list[0];
 
             if (preferred) {
-              setSelectedBusId((current) =>
-                current || String(preferred.id)
-              );
+              setSelectedBusId(String(preferred.id));
+              setBusLocationDetails(preferred);
             } else if (!cancelled) {
-              setBusLocationDetails(busLocation || null);
+              setSelectedBusId("");
+              setBusLocationDetails(null);
             }
 
             break;
@@ -421,50 +422,45 @@ export default function AdminWorkspace({
   // KEEP THE SHARED BUS LOCATION UPDATED
 
   useEffect(() => {
-    setBusLocationDetails(busLocation || null);
+    if (busLocation) setBusLocationDetails(busLocation);
   }, [busLocation]);
 
-  // REFRESH BUS LOCATION EVERY 10 SECONDS
-
+  // REFRESH ALL ACTIVE BUS LOCATIONS EVERY 10 SECONDS
+  // The Admin map receives one live coordinate set per bus.
   useEffect(() => {
-    if (
-      selectedMenu !== "live-bus-location" ||
-      !selectedBusId ||
-      !token
-    ) {
+    if (selectedMenu !== "live-bus-location" || !token) {
       return;
     }
 
     let cancelled = false;
 
-    const refreshLocation = async () => {
+    const refreshFleet = async () => {
       try {
-        const latest = await adminRequest(
-          `/api/locations/bus/${encodeURIComponent(
-            selectedBusId
-          )}/latest`,
-          token
-        );
+        const data = await adminRequest("/api/admin/buses", token);
+        if (cancelled) return;
 
-        if (!cancelled) {
-          setBusLocationDetails(latest.location || null);
+        const list = data.buses || [];
+        setBuses(list);
+
+        const selected =
+          list.find((bus) => String(bus.id) === String(selectedBusId)) ||
+          list[0] || null;
+
+        if (selected) {
+          setSelectedBusId(String(selected.id));
+          setBusLocationDetails(selected);
+        } else {
+          setBusLocationDetails(null);
         }
       } catch (requestError) {
         if (!cancelled) {
-          setError(
-            requestError.message ||
-              "Unable to refresh bus location."
-          );
+          setError(requestError.message || "Unable to refresh fleet locations.");
         }
       }
     };
 
-    refreshLocation();
-
-    const timer = window.setInterval(
-      refreshLocation,
-      10000
-    );
+    refreshFleet();
+    const timer = window.setInterval(refreshFleet, 10000);
 
     return () => {
       cancelled = true;
@@ -676,6 +672,30 @@ export default function AdminWorkspace({
         requestError.message ||
           "Unable to assign this driver."
       );
+    }
+  };
+
+  // ASSIGN ROUTE TO BUS
+  const assignRoute = async (event, busId) => {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+
+    const routeId = new FormData(event.currentTarget).get("route_id");
+    if (!routeId) {
+      setError("Select a route before assigning the bus.");
+      return;
+    }
+
+    try {
+      await adminRequest(`/api/buses/${busId}`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ route_id: Number(routeId) }),
+      });
+      setNotice("Route assigned to bus successfully.");
+      setReloadVersion((value) => value + 1);
+    } catch (requestError) {
+      setError(requestError.message || "Unable to assign this route.");
     }
   };
 
@@ -953,8 +973,10 @@ export default function AdminWorkspace({
                 "REGISTRATION",
                 "CAPACITY",
                 "DRIVER",
+                "ROUTE",
                 "STATUS",
                 "ASSIGN DRIVER",
+                "ASSIGN ROUTE",
               ]}
               isEmpty={!matchingBuses.length && !loading}
               emptyTitle="No bus records found"
@@ -977,7 +999,40 @@ export default function AdminWorkspace({
 
                   <td>{bus.capacity ?? "—"}</td>
 
-                  <td>{bus.driver_name || "Not assigned"}</td>
+                  <td>
+                    {bus.driver_id && bus.driver_name ? (
+                      <>
+                        <strong>{bus.driver_name}</strong>
+                        <small className="adm-subcell">
+                          <StatusChip variant="success">ASSIGNED</StatusChip>
+                        </small>
+                      </>
+                    ) : (
+                      <>
+                        <strong>Not assigned</strong>
+                        <small className="adm-subcell">
+                          <StatusChip variant="neutral">PENDING</StatusChip>
+                        </small>
+                      </>
+                    )}
+                  </td>
+                  <td>
+                    {bus.route_id && bus.route_name ? (
+                      <>
+                        <strong>{bus.route_name}</strong>
+                        <small className="adm-subcell">
+                          <StatusChip variant="success">ASSIGNED</StatusChip>
+                        </small>
+                      </>
+                    ) : (
+                      <>
+                        <strong>Not assigned</strong>
+                        <small className="adm-subcell">
+                          <StatusChip variant="neutral">PENDING</StatusChip>
+                        </small>
+                      </>
+                    )}
+                  </td>
 
                   <td>
                     <StatusChip
@@ -1001,6 +1056,7 @@ export default function AdminWorkspace({
                     >
                       <select
                         aria-label={`Choose driver for ${bus.bus_number}`}
+                        key={`driver-${bus.id}-${bus.driver_id || "none"}-${reloadVersion}`}
                         name="driver_id"
                         defaultValue={bus.driver_id || ""}
                       >
@@ -1019,6 +1075,35 @@ export default function AdminWorkspace({
                       <button
                         type="submit"
                         className="adm-button adm-button-small"
+                      >
+                        Assign
+                      </button>
+                    </form>
+                  </td>
+
+                  <td>
+                    <form
+                      className="adm-inline-assign"
+                      onSubmit={(event) => assignRoute(event, bus.id)}
+                    >
+                      <select
+                        aria-label={`Choose route for ${bus.bus_number}`}
+                        key={`route-${bus.id}-${bus.route_id || "none"}-${reloadVersion}`}
+                        name="route_id"
+                        defaultValue={bus.route_id || ""}
+                        disabled={routes.length === 0}
+                      >
+                        <option value="">Choose route</option>
+                        {routes.map((route) => (
+                          <option key={route.id} value={route.id}>
+                            {route.route_name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="submit"
+                        className="adm-button adm-button-small"
+                        disabled={routes.length === 0}
                       >
                         Assign
                       </button>
@@ -1396,12 +1481,9 @@ export default function AdminWorkspace({
             <div className="adm-metric-card">
               <span>Tracking status</span>
               <strong>
-                {busLocationDetails ? "LIVE" : "WAITING"}
+                {buses.filter((bus) => bus.latitude != null && bus.longitude != null).length} / {buses.length}
               </strong>
-              <small>
-                {busLocationStatus ||
-                  "Waiting for a GPS report"}
-              </small>
+              <small>Active buses with a latest GPS point</small>
             </div>
 
             <div className="adm-metric-card">
@@ -1434,9 +1516,7 @@ export default function AdminWorkspace({
               <div>
                 <h3>Fleet map</h3>
                 <p>
-                  {busLocationDetails?.recorded_at
-                    ? `Last update: ${busLocationDetails.recorded_at}`
-                    : "The map displays the latest GPS point returned by the backend."}
+                  Each marker represents a bus with a current active-trip GPS report. Refreshes automatically every 10 seconds.
                 </p>
               </div>
 
@@ -1446,31 +1526,13 @@ export default function AdminWorkspace({
 
                   <select
                     value={selectedBusId}
-                    onChange={async (event) => {
+                    onChange={(event) => {
                       const id = event.target.value;
-
                       setSelectedBusId(id);
                       setError("");
-
-                      if (!id) return;
-
-                      try {
-                        const data = await adminRequest(
-                          `/api/locations/bus/${id}/latest`,
-                          token
-                        );
-
-                        setBusLocationDetails(
-                          data.location ||
-                            data.bus_location ||
-                            data
-                        );
-                      } catch (requestError) {
-                        setError(
-                          requestError.message ||
-                            "No location is available for this bus yet."
-                        );
-                      }
+                      setBusLocationDetails(
+                        buses.find((bus) => String(bus.id) === String(id)) || null
+                      );
                     }}
                   >
                     {buses.map((bus) => (
@@ -1498,45 +1560,33 @@ export default function AdminWorkspace({
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-                {busLocationDetails &&
-                  Number.isFinite(
-                    Number(busLocationDetails.latitude)
-                  ) &&
-                  Number.isFinite(
-                    Number(busLocationDetails.longitude)
-                  ) && (
+                {buses
+                  .filter((bus) =>
+                    bus.latitude !== null && bus.latitude !== undefined &&
+                    bus.longitude !== null && bus.longitude !== undefined &&
+                    Number.isFinite(Number(bus.latitude)) &&
+                    Number.isFinite(Number(bus.longitude))
+                  )
+                  .map((bus) => (
                     <Marker
-                      position={[
-                        Number(busLocationDetails.latitude),
-                        Number(busLocationDetails.longitude),
-                      ]}
+                      key={bus.id}
+                      position={[Number(bus.latitude), Number(bus.longitude)]}
                     >
                       <Popup>
-                        <strong>
-                          {buses.find(
-                            (bus) =>
-                              String(bus.id) ===
-                              String(selectedBusId)
-                          )?.bus_number || "Bus location"}
-                        </strong>
-
-                        <br />
-
-                        Last update:{" "}
-                        {busLocationDetails.recorded_at ||
-                          "Not provided"}
+                        <strong>{bus.bus_number || `BUS ${bus.id}`}</strong>
+                        <br />Route: {bus.route_name || "Not assigned"}
+                        <br />Driver: {bus.driver_name || "Not assigned"}
+                        <br />Trip: {bus.active_trip_type || "No active trip"}
+                        <br />Last update: {bus.recorded_at || "Not available"}
                       </Popup>
                     </Marker>
-                  )}
+                  ))}
               </MapContainer>
 
-              {!busLocationDetails && (
+              {!buses.some((bus) => bus.latitude != null && bus.longitude != null) && (
                 <div className="adm-map-overlay">
-                  <strong>Waiting for live GPS</strong>
-                  <span>
-                    Start a driver trip and send a location
-                    update to display a bus marker.
-                  </span>
+                  <strong>Waiting for fleet GPS</strong>
+                  <span>Start a trip from a Driver account. Every active bus will appear here after its first GPS update.</span>
                 </div>
               )}
             </div>
