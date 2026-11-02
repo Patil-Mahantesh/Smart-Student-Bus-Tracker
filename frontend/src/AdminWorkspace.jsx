@@ -8,7 +8,7 @@ import {
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
-  "http://127.0.0.1:5000"
+  "https://smart-student-bus-tracker-backend.onrender.com"
 ).replace(/\/+$/, "");
 
 async function adminRequest(path, token, options = {}) {

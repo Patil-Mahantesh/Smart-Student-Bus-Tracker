@@ -1,4 +1,4 @@
-/*
+﻿﻿/*
   StopManagement.jsx
 
   Map-based Stop Management for Admin.
@@ -49,7 +49,7 @@ const DEFAULT_CENTER = [
   76.8343,
 ];
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "https://smart-student-bus-tracker-backend.onrender.com").replace(/\/+$/, "");
 
 
 // ------------------------------------------------------------

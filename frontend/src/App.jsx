@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 
 import {
   MapContainer,
@@ -19,7 +19,7 @@ import {
   adminMenu,
   driverMenu,
 } from "./flowConfig";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "${API_BASE_URL}").replace(/\/+$/, "");
 
 function getLocalDateString() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -628,7 +628,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/notifications",
+          "${API_BASE_URL}/api/notifications",
           {
             method: "GET",
 
@@ -698,7 +698,7 @@ function App() {
     try {
 
       const response = await apiFetch(
-        "http://127.0.0.1:5000/api/parents/children",
+        "${API_BASE_URL}/api/parents/children",
         {
           method: "GET",
           headers: {
@@ -837,7 +837,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `http://127.0.0.1:5000/api/attendance/student/${studentId}`,
+          `${API_BASE_URL}/api/attendance/student/${studentId}`,
           {
             method: "GET",
             headers: {
@@ -1278,7 +1278,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/face/detect",
+          "${API_BASE_URL}/api/face/detect",
           {
 
             method: "POST",
@@ -1378,7 +1378,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/attendance/mark",
+          "${API_BASE_URL}/api/attendance/mark",
           {
 
             method: "POST",
@@ -1506,7 +1506,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/face/recognize",
+          "${API_BASE_URL}/api/face/recognize",
           {
 
             method: "POST",
@@ -1728,7 +1728,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `http://127.0.0.1:5000/api/face-registration/${selectedStudentId}`,
+          `${API_BASE_URL}/api/face-registration/${selectedStudentId}`,
           {
 
             method: "POST",
@@ -1815,7 +1815,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/students",
+          "${API_BASE_URL}/api/students",
           {
             method: "GET",
             headers: {
@@ -1881,7 +1881,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/admin/routes",
+          "${API_BASE_URL}/api/admin/routes",
           {
             method: "GET",
 
@@ -2070,7 +2070,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/students",
+          "${API_BASE_URL}/api/students",
           {
             method: "POST",
 
@@ -2215,7 +2215,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `http://127.0.0.1:5000/api/students/${student.id}`,
+          `${API_BASE_URL}/api/students/${student.id}`,
           {
             method: "DELETE",
             headers: {
@@ -2349,7 +2349,7 @@ function App() {
     const loadAdminOverview = async () => {
       try {
         const response = await apiFetch(
-          "http://127.0.0.1:5000/api/admin/overview",
+          "${API_BASE_URL}/api/admin/overview",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -2395,7 +2395,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/auth/login",
+          "${API_BASE_URL}/api/auth/login",
           {
 
             method: "POST",
@@ -2600,7 +2600,7 @@ function App() {
 
         const response =
           await apiFetch(
-            `http://127.0.0.1:5000/api/notifications/${notificationId}/read`,
+            `${API_BASE_URL}/api/notifications/${notificationId}/read`,
             {
 
               method: "PUT",
@@ -2674,7 +2674,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `http://127.0.0.1:5000/api/travel/status/${studentId}?travel_date=${travelDate}`,
+          `${API_BASE_URL}/api/travel/status/${studentId}?travel_date=${travelDate}`,
           {
             method: "GET",
 
@@ -2743,7 +2743,7 @@ function App() {
 
         const response =
           await apiFetch(
-            "http://127.0.0.1:5000/api/travel/status",
+            "${API_BASE_URL}/api/travel/status",
             {
               method: "POST",
 
@@ -2859,7 +2859,7 @@ function App() {
 
       const response =
         await apiFetch(
-          `http://127.0.0.1:5000/api/travel/today?travel_date=${travelDate}`,
+          `${API_BASE_URL}/api/travel/today?travel_date=${travelDate}`,
           {
             method: "GET",
             headers: {
@@ -3026,7 +3026,7 @@ function App() {
 
       const response =
         await apiFetch(
-          "http://127.0.0.1:5000/api/locations",
+          "${API_BASE_URL}/api/locations",
           {
 
             method: "POST",
@@ -3123,7 +3123,7 @@ function App() {
     try {
 
       const response = await apiFetch(
-        "http://127.0.0.1:5000/api/trips/active",
+        "${API_BASE_URL}/api/trips/active",
         {
           method: "GET",
           headers: {
@@ -3496,7 +3496,7 @@ function App() {
 
         const response =
           await apiFetch(
-            `http://127.0.0.1:5000/api/trips/${activeTripId}/stop`,
+            `${API_BASE_URL}/api/trips/${activeTripId}/stop`,
             {
 
               method: "POST",
